@@ -33,7 +33,7 @@ import com.naze.maps.R
 @Composable
 fun MapLoadingOverlay(modifier: Modifier = Modifier) {
     val infiniteTransition = rememberInfiniteTransition(label = "naze-splash-pulse")
-    val pulseScale by infiniteTransition.animateFloat(
+    val pulseScale = infiniteTransition.animateFloat(
         initialValue = 0.92f,
         targetValue = 1.06f,
         animationSpec = infiniteRepeatable(
@@ -41,7 +41,7 @@ fun MapLoadingOverlay(modifier: Modifier = Modifier) {
             repeatMode = RepeatMode.Reverse,
         ),
         label = "naze-splash-scale",
-    )
+    ).value
 
     Box(
         modifier = modifier
