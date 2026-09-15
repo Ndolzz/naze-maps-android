@@ -23,6 +23,12 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # Default packages ("tools platform-tools") minta paket legacy "tools" yang sudah
+          # dihapus dari Android SDK repository Google — kalau dibiarkan default, step ini
+          # gagal duluan sebelum sempat build apa-apa. Kosongkan di sini; Gradle/AGP sendiri
+          # yang otomatis download platforms/build-tools yang dibutuhkan saat assembleDebug.
+          packages: ""
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
