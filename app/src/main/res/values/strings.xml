@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">NAZE Maps</string>
+    <string name="tagline">Explore the world</string>
+
+    <string name="err_gps_off">Location service perangkat sedang mati. Aktifkan GPS untuk melihat posisimu di peta.</string>
+    <string name="err_permission_denied">NAZE Maps butuh izin lokasi untuk menampilkan posisimu dan mencari rute. Buka Pengaturan untuk mengizinkan.</string>
+    <string name="err_internet">Tidak ada koneksi internet. Beberapa fitur seperti pencarian dan rute butuh koneksi.</string>
+    <string name="err_search_generic">Pencarian gagal, coba lagi.</string>
+    <string name="action_open_settings">Buka Pengaturan</string>
+    <string name="action_retry">Coba Lagi</string>
+</resources>

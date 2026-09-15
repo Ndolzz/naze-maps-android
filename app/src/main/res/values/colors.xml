@@ -1,0 +1,15 @@
+<resources>
+    <!-- Brand Naze — dipertahankan sama persis dengan PWA -->
+    <color name="naze_bg_dark">#080B12</color>
+    <color name="naze_bg_light">#F5F7FA</color>
+    <color name="naze_primary">#2563EB</color>
+    <color name="naze_accent">#3B82F6</color>
+    <color name="naze_route">#4FA8FF</color>
+    <color name="naze_purple">#7C3AED</color>
+    <color name="naze_danger">#EF4444</color>
+    <color name="naze_ok">#22C55E</color>
+    <color name="naze_text_dark">#F2F5FA</color>
+    <color name="naze_text_light">#0E1420</color>
+    <color name="naze_text_dim_dark">#8A93A6</color>
+    <color name="naze_text_dim_light">#6B7280</color>
+</resources>

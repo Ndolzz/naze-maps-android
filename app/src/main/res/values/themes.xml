@@ -1,0 +1,16 @@
+<resources>
+    <style name="Theme.NazeMaps" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <!-- Splash screen native (Android 12+ SplashScreen API, fallback otomatis ke versi lama
+         lewat library core-splashscreen) — muncul instan saat proses app baru start, sebelum
+         Compose sempat digambar, jadi buka app gak pernah nge-flash layar kosong/putih. -->
+    <style name="Theme.NazeMaps.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/naze_bg_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.NazeMaps</item>
+    </style>
+</resources>
