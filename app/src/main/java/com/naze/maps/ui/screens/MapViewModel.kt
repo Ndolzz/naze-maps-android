@@ -24,6 +24,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 sealed class MapBanner {
@@ -70,10 +71,10 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         viewModelScope.launch {
-            settings.isDarkTheme.collect { dark -> _uiState.value = _uiState.value.copy(isDarkTheme = dark) }
+            settings.isDarkTheme.collect { dark -> _uiState.update { it.copy(isDarkTheme = dark) } }
         }
         viewModelScope.launch {
-            settings.distanceUnit.collect { unit -> _uiState.value = _uiState.value.copy(distanceUnit = unit) }
+            settings.distanceUnit.collect { unit -> _uiState.update { it.copy(distanceUnit = unit) } }
         }
     }
 
@@ -81,25 +82,25 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         if (granted) {
             startTracking()
         } else {
-            _uiState.value = _uiState.value.copy(banner = MapBanner.PermissionDenied)
+            _uiState.update { it.copy(banner = MapBanner.PermissionDenied) }
         }
     }
 
     fun startTracking() {
         val app = getApplication<Application>()
         if (!PermissionUtils.hasLocationPermission(app)) {
-            _uiState.value = _uiState.value.copy(banner = MapBanner.PermissionDenied)
+            _uiState.update { it.copy(banner = MapBanner.PermissionDenied) }
             return
         }
         if (!PermissionUtils.isLocationServiceEnabled(app)) {
-            _uiState.value = _uiState.value.copy(banner = MapBanner.GpsOff)
+            _uiState.update { it.copy(banner = MapBanner.GpsOff) }
             return
         }
-        _uiState.value = _uiState.value.copy(isTrackingMe = true, banner = null)
+        _uiState.update { it.copy(isTrackingMe = true, banner = null) }
         trackingJob?.cancel()
         trackingJob = viewModelScope.launch {
             locationRepo.observeLocation().collect { loc ->
-                _uiState.value = _uiState.value.copy(myLocation = loc)
+                _uiState.update { it.copy(myLocation = loc) }
             }
         }
         startCompass()
@@ -108,7 +109,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     fun stopTracking() {
         trackingJob?.cancel()
         compassJob?.cancel()
-        _uiState.value = _uiState.value.copy(isTrackingMe = false)
+        _uiState.update { it.copy(isTrackingMe = false) }
     }
 
     private fun startCompass() {
@@ -116,36 +117,40 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         compassJob?.cancel()
         compassJob = viewModelScope.launch {
             compassRepo.observeHeading().collect { heading ->
-                _uiState.value = _uiState.value.copy(headingDegrees = heading)
+                _uiState.update { it.copy(headingDegrees = heading) }
             }
         }
     }
 
     fun onSearchQueryChange(query: String) {
-        _uiState.value = _uiState.value.copy(searchQuery = query)
+        _uiState.update { it.copy(searchQuery = query) }
         searchJob?.cancel()
         if (query.isBlank()) {
-            _uiState.value = _uiState.value.copy(searchResults = emptyList(), isSearching = false)
+            _uiState.update { it.copy(searchResults = emptyList(), isSearching = false) }
             return
         }
         searchJob = viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSearching = true)
+            _uiState.update { it.copy(isSearching = true) }
             kotlinx.coroutines.delay(350) // light debounce so we don't hit Nominatim on every keystroke
             when (val outcome = searchRepo.search(query)) {
-                is SearchOutcome.Success -> _uiState.value =
-                    _uiState.value.copy(searchResults = outcome.results, isSearching = false, banner = null)
-                SearchOutcome.Empty -> _uiState.value =
-                    _uiState.value.copy(searchResults = emptyList(), isSearching = false)
-                SearchOutcome.NoInternet -> _uiState.value =
-                    _uiState.value.copy(isSearching = false, banner = MapBanner.NoInternet)
-                is SearchOutcome.Error -> _uiState.value =
-                    _uiState.value.copy(isSearching = false, banner = MapBanner.Generic(outcome.message))
+                is SearchOutcome.Success -> _uiState.update {
+                    it.copy(searchResults = outcome.results, isSearching = false, banner = null)
+                }
+                SearchOutcome.Empty -> _uiState.update {
+                    it.copy(searchResults = emptyList(), isSearching = false)
+                }
+                SearchOutcome.NoInternet -> _uiState.update {
+                    it.copy(isSearching = false, banner = MapBanner.NoInternet)
+                }
+                is SearchOutcome.Error -> _uiState.update {
+                    it.copy(isSearching = false, banner = MapBanner.Generic(outcome.message))
+                }
             }
         }
     }
 
     fun selectPlace(place: NominatimResult) {
-        _uiState.value = _uiState.value.copy(selectedPlace = place, searchResults = emptyList(), searchQuery = "")
+        _uiState.update { it.copy(selectedPlace = place, searchResults = emptyList(), searchQuery = "") }
         viewModelScope.launch {
             historyRepo.record(place.mainText, place.subText, place.latitude, place.longitude)
         }
@@ -159,7 +164,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
             lat = entry.latitude.toString(),
             lon = entry.longitude.toString(),
         )
-        _uiState.value = _uiState.value.copy(selectedPlace = place, searchResults = emptyList())
+        _uiState.update { it.copy(selectedPlace = place, searchResults = emptyList()) }
     }
 
     fun deleteHistoryEntry(entry: HistoryEntity) {
@@ -171,7 +176,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun clearSelection() {
-        _uiState.value = _uiState.value.copy(selectedPlace = null, activeRoute = null)
+        _uiState.update { it.copy(selectedPlace = null, activeRoute = null) }
     }
 
     fun requestRoute(to: GeoPoint, profile: RoutingProfile) {
@@ -180,12 +185,16 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
             when (val outcome = routingRepo.getRoute(
                 GeoPoint(from.latitude, from.longitude), to, profile,
             )) {
-                is RouteOutcome.Success -> _uiState.value =
-                    _uiState.value.copy(activeRoute = outcome.routes.first(), banner = null)
-                RouteOutcome.NoInternet -> _uiState.value = _uiState.value.copy(banner = MapBanner.NoInternet)
-                RouteOutcome.NoRouteFound -> _uiState.value =
-                    _uiState.value.copy(banner = MapBanner.Generic("Rute tidak ditemukan"))
-                is RouteOutcome.Error -> _uiState.value = _uiState.value.copy(banner = MapBanner.Generic(outcome.message))
+                is RouteOutcome.Success -> _uiState.update {
+                    it.copy(activeRoute = outcome.routes.first(), banner = null)
+                }
+                RouteOutcome.NoInternet -> _uiState.update { it.copy(banner = MapBanner.NoInternet) }
+                RouteOutcome.NoRouteFound -> _uiState.update {
+                    it.copy(banner = MapBanner.Generic("Rute tidak ditemukan"))
+                }
+                is RouteOutcome.Error -> _uiState.update {
+                    it.copy(banner = MapBanner.Generic(outcome.message))
+                }
             }
         }
     }
@@ -203,11 +212,11 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun dismissBanner() {
-        _uiState.value = _uiState.value.copy(banner = null)
+        _uiState.update { it.copy(banner = null) }
     }
 
     fun toggleSatellite() {
-        _uiState.value = _uiState.value.copy(isSatelliteOn = !_uiState.value.isSatelliteOn)
+        _uiState.update { it.copy(isSatelliteOn = !it.isSatelliteOn) }
     }
 
     fun toggleTheme() {
