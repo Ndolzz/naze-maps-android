@@ -11,6 +11,7 @@ import com.naze.maps.location.CompassRepository
 import com.naze.maps.location.LocationRepository
 import com.naze.maps.location.NazeLocation
 import com.naze.maps.location.PermissionUtils
+import com.naze.maps.network.ConnectivityObserver
 import com.naze.maps.routing.OsrmRoute
 import com.naze.maps.routing.RouteOutcome
 import com.naze.maps.routing.RoutingProfile
@@ -58,6 +59,9 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val favoritesRepo = FavoritesRepository(application)
     private val historyRepo = HistoryRepository(application)
     private val settings = SettingsDataStore(application)
+    // TASK-006 (BUG-010): connectivity was previously observed by nothing; the app only
+    // reacted to failures. Now the banner appears proactively when the network is lost.
+    private val connectivity = ConnectivityObserver(application)
 
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
@@ -75,6 +79,19 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         }
         viewModelScope.launch {
             settings.distanceUnit.collect { unit -> _uiState.update { it.copy(distanceUnit = unit) } }
+        }
+        viewModelScope.launch {
+            connectivity.observe().collect { online ->
+                _uiState.update { state ->
+                    when {
+                        // Back online: clear a stale offline banner (only that one).
+                        online -> if (state.banner == MapBanner.NoInternet) state.copy(banner = null) else state
+                        // Lost connection: raise the offline banner, but do not overwrite a
+                        // more specific banner (permission / GPS) that the user is acting on.
+                        else -> if (state.banner == null) state.copy(banner = MapBanner.NoInternet) else state
+                    }
+                }
+            }
         }
     }
 
