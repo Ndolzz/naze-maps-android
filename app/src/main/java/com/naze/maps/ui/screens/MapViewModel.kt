@@ -50,18 +50,23 @@ data class MapUiState(
     val banner: MapBanner? = null,
 )
 
-class MapViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val locationRepo = LocationRepository(application)
-    private val compassRepo = CompassRepository(application)
-    private val searchRepo = SearchRepository()
-    private val routingRepo = RoutingRepository()
-    private val favoritesRepo = FavoritesRepository(application)
-    private val historyRepo = HistoryRepository(application)
-    private val settings = SettingsDataStore(application)
-    // TASK-006 (BUG-010): connectivity was previously observed by nothing; the app only
-    // reacted to failures. Now the banner appears proactively when the network is lost.
-    private val connectivity = ConnectivityObserver(application)
+/**
+ * TASK-009 (TD-ARCH-2): all collaborators are now constructor-injected with sensible
+ * defaults built from the Application, so production wiring is unchanged
+ * (AndroidViewModelFactory still works via the @JvmOverloads single-arg constructor),
+ * while unit tests can pass fakes for every dependency. No behavior change.
+ */
+class MapViewModel @JvmOverloads constructor(
+    application: Application,
+    private val locationRepo: LocationRepository = LocationRepository(application),
+    private val compassRepo: CompassRepository = CompassRepository(application),
+    private val searchRepo: SearchRepository = SearchRepository(),
+    private val routingRepo: RoutingRepository = RoutingRepository(),
+    private val favoritesRepo: FavoritesRepository = FavoritesRepository(application),
+    private val historyRepo: HistoryRepository = HistoryRepository(application),
+    private val settings: SettingsDataStore = SettingsDataStore(application),
+    private val connectivity: ConnectivityObserver = ConnectivityObserver(application),
+) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
@@ -194,8 +199,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun requestRoute(to: GeoPoint, profile: RoutingProfile) {
-        // TASK-008 (BUG-002): previously `?: return` left the user without any feedback when
-        // no GPS fix was available. Now the user is told to enable My Location first.
+        // TASK-008a (BUG-002): tell the user to enable My Location instead of failing silently.
         val from = _uiState.value.myLocation
         if (from == null) {
             _uiState.update {
@@ -235,8 +239,6 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
 
     /**
      * TASK-007 (TD-ARCH-3): single geocoding entry point for the Distance screen.
-     * Previously DistanceScreen built its own SearchRepository — a UI->data layer bypass.
-     * The screen now calls this; behavior (geocodeOne semantics) is unchanged.
      */
     suspend fun geocodeOne(query: String): NominatimResult? = searchRepo.geocodeOne(query)
 
