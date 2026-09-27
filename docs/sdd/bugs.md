@@ -2,14 +2,14 @@
 
 - ID: SDD-060
 - Title: Bug Management
-- Status: APPROVED (register; perbaikan menunggu instruksi/migration plan)
+- Status: APPROVED (register; perbaikan menunggu migration plan)
 
 Format per bug; severity berdasar dampak & evidence kode, bukan perkiraan.
 
 ## BUG-001 — MapView tidak di-destroy saat pindah tab (GL surface leak)
 - Severity: HIGH
 - Affected feature: Map / navigation
-- Reproduction: buka app → pindah ke tab Favorites → kembali ke Map (diagonal beberapa kali)
+- Reproduction: buka app → pindah ke tab Favorites → kembali ke Map (berulang)
 - Expected: MapView.onDestroy() dipanggil saat composable leaving composition
 - Actual: NazeNavHost memakai when(selectedTab) sehingga MapScreen keluar composition; DisposableEffect hanya remove observer — MapView.onDestroy tidak pernah dipanggil untuk instance yang dibuang
 - Possible root cause: lifecycle forwarding terpasang pada LifecycleOwner activity, bukan pada disposal composition
@@ -51,10 +51,10 @@ Format per bug; severity berdasar dampak & evidence kode, bukan perkiraan.
 - Severity: MEDIUM
 - Reproduction: race antara settings collect, tracking collect, compass collect, search job — semua melakukan _uiState.value = _uiState.value.copy(...)
 - Expected: update state atomik
-- Actual: read-modify-write non-atomik dari ≥4 coroutine paralel; update bisa saling menimpa
+- Actual: read-modify-write non-atomik dari >=4 coroutine paralel; update bisa saling menimpa
 - Evidence: MapViewModel (semua assignment _uiState)
 - Affected files: ui/screens/MapViewModel.kt
-- Status: OPEN (dampak probabilistik; fix: MutableStateFlow.update)
+- Status: OPEN (dampak probabilistik; fix: MutableStateFlow.update — TASK-004)
 
 ## BUG-006 — "lokasi saya" di DistanceScreen gagal menyesatkan bila GPS belum ada
 - Severity: MEDIUM
@@ -71,11 +71,12 @@ Format per bug; severity berdasar dampak & evidence kode, bukan perkiraan.
 - Affected files: history/HistoryDao.kt
 - Status: OPEN (behaviour masih konsisten-ish; konvensi ambigu)
 
-## BUG-008 — Nominatim request tanpa limit/accept-language; debounce 350ms agresif
+## BUG-008 — Nominatim: tanpa accept-language; debounce 350ms agresif
 - Severity: MEDIUM (risiko diblokir Nominatim 403)
-- Evidence: NominatimApi.kt; MapViewModel debounce 350
+- KOREKSI AUDIT: NominatimApi TIDAK kosong parameter — sudah mengirim format=json, addressdetails=1, limit=8. Yang belum ada: accept-language; dan debounce 350ms per keystroke tetap agresif terhadap usage policy Nominatim (1 req/s untuk aplikasi berat).
+- Evidence: search/NominatimApi.kt; MapViewModel debounce 350
 - Affected files: search/NominatimApi.kt, ui/screens/MapViewModel.kt
-- Status: OPEN — perlu verifikasi kebijakan usage policy sebelum fix
+- Status: OPEN — TASK-011 (verifikasi policy dulu)
 
 ## BUG-009 — Dead code: renameFavorite & isSaved tidak pernah dipanggil UI
 - Severity: LOW
@@ -99,13 +100,22 @@ Format per bug; severity berdasar dampak & evidence kode, bukan perkiraan.
 - Severity: MEDIUM
 - Evidence: comment di LocationRepository ("collectors should cancel when the map leaves the foreground") vs NazeNavHost yang membongkar MapScreen tanpa memanggil stopTracking
 - Affected files: ui/navigation/NazeNavHost.kt, ui/screens/MapViewModel.kt
-- Status: OPEN (perlu keputusan spec: hentikan di tab lain atau tetap?)
+- Status: OPEN (perlu keputusan spec: hentikan di tab lain atau tetap? — ADR-005)
 
 ## BUG-013 — Build lokal rusak: gradlew/gradle-wrapper.jar tidak ada di repo
 - Severity: MEDIUM (DX; CI punya workaround)
 - Evidence: file tree tidak berisi gradlew/gradlew.bat/gradle-wrapper.jar
 - Affected files: repo root
-- Status: OPEN
+- Status: IN PROGRESS — TASK-002 workflow `generate-gradle-wrapper.yml` akan auto-commit wrapper pada push berikutnya.
+
+## BUG-014 — Locale-dependent number formatting di DistanceUtils.format (ditemukan saat TASK-003)
+- Severity: LOW
+- Reproduction: set device locale ID/DE → hasil "1,2 km" (koma); locale EN → "1.2 km"
+- Expected: format konsisten (keputusan produk: Locale.US tetap vs ikut locale user)
+- Actual: `"%.1f km".format(km)` memakai default locale — tidak deterministik lintas device
+- Evidence: utils/DistanceUtils.kt; characterization test sengaja tidak assert exact-string
+- Affected files: utils/DistanceUtils.kt
+- Status: OPEN (keputusan produk dulu, baru fix; test sudah menghindari dependensi locale)
 
 ## Potential (belum ada evidence runtime)
 
