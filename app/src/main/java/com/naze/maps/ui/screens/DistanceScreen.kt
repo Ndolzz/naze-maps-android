@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
@@ -28,8 +27,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.naze.maps.search.SearchOutcome
-import com.naze.maps.search.SearchRepository
 import com.naze.maps.utils.DistanceUtils
 import com.naze.maps.utils.GeoPoint
 import com.naze.maps.utils.TravelMode
@@ -42,7 +39,6 @@ fun DistanceScreen(modifier: Modifier = Modifier) {
     val viewModel: MapViewModel = viewModel()
     val state by viewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
-    val searchRepo = remember { SearchRepository() }
 
     val points = remember { mutableStateListOf(DcPoint("A"), DcPoint("B")) }
     var travelMode by remember { mutableStateOf(TravelMode.DRIVING) }
@@ -99,7 +95,9 @@ fun DistanceScreen(modifier: Modifier = Modifier) {
                             resolved.add(GeoPoint(loc.latitude, loc.longitude, p.label))
                             continue
                         }
-                        val geocoded = searchRepo.geocodeOne(p.value)
+                        // TASK-007: geocoding goes through the shared ViewModel instead of a
+                        // SearchRepository created by this screen (UI->data boundary fix).
+                        val geocoded = viewModel.geocodeOne(p.value)
                         if (geocoded == null) {
                             errorText = "Tidak ditemukan: ${p.value}"
                             isCalculating = false

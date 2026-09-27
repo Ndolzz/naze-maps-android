@@ -228,6 +228,13 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { favoritesRepo.rename(favorite, newName) }
     }
 
+    /**
+     * TASK-007 (TD-ARCH-3): single geocoding entry point for the Distance screen.
+     * Previously DistanceScreen built its own SearchRepository — a UI->data layer bypass.
+     * The screen now calls this; behavior (geocodeOne semantics) is unchanged.
+     */
+    suspend fun geocodeOne(query: String): NominatimResult? = searchRepo.geocodeOne(query)
+
     fun dismissBanner() {
         _uiState.update { it.copy(banner = null) }
     }
