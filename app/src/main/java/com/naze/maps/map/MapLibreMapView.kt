@@ -20,6 +20,10 @@ import org.maplibre.android.maps.Style
  * host Composable's lifecycle so the GL surface pauses/resumes correctly instead of leaking
  * (requirement #14: no memory leaks, no unnecessary background rendering).
  *
+ * BUG-001 fix [TASK-005]: onDestroy() is now also invoked from onDispose, so the MapView is
+ * properly destroyed when the composable leaves composition (e.g. tab switch), not only when
+ * the Activity is destroyed. A guard flag prevents double-destroy when both paths would fire.
+ *
  * No globe/3D projection: MapLibre Native for Android doesn't implement it yet (web-only via
  * maplibre-gl-js). This renders a solid 2D vector map — no fake globe, per requirement #8's
  * own rule against claiming 360° when the engine is actually flat.
@@ -33,6 +37,8 @@ fun MapLibreMapView(
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val mapViewState = remember { mutableStateOf<MapView?>(null) }
+    // Guards against calling onDestroy() twice (Activity destroy + composition dispose).
+    val destroyed = remember { mutableStateOf(false) }
 
     AndroidView(
         modifier = modifier.fillMaxSize(),
@@ -65,11 +71,26 @@ fun MapLibreMapView(
                 Lifecycle.Event.ON_RESUME -> view.onResume()
                 Lifecycle.Event.ON_PAUSE -> view.onPause()
                 Lifecycle.Event.ON_STOP -> view.onStop()
-                Lifecycle.Event.ON_DESTROY -> view.onDestroy()
+                Lifecycle.Event.ON_DESTROY -> {
+                    if (!destroyed.value) {
+                        destroyed.value = true
+                        view.onDestroy()
+                    }
+                }
                 else -> Unit
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            // Leaving composition (e.g. switching tab): destroy the GL surface too.
+            mapViewState.value?.let { view ->
+                if (!destroyed.value) {
+                    destroyed.value = true
+                    view.onDestroy()
+                }
+            }
+            mapViewState.value = null
+        }
     }
 }
