@@ -35,16 +35,16 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
                 Text("Tema gelap", style = MaterialTheme.typography.bodyLarge)
                 Text("Sesuai identitas brand Naze (dark modern)", style = MaterialTheme.typography.labelSmall)
             }
-            Switch(checked = state.isDarkTheme, onCheckedChange = { viewModel.toggleTheme() })
+            Switch(checked = state.settings.isDarkTheme, onCheckedChange = { viewModel.toggleTheme() })
         }
 
         Text("Satuan jarak", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
         Row(modifier = Modifier.padding(top = 6.dp)) {
             TextButton(onClick = { viewModel.setDistanceUnit(DistanceUnit.KM) }) {
-                Text("Kilometer", fontWeight = if (state.distanceUnit == DistanceUnit.KM) androidx.compose.ui.text.font.FontWeight.Bold else null)
+                Text("Kilometer", fontWeight = if (state.settings.distanceUnit == DistanceUnit.KM) androidx.compose.ui.text.font.FontWeight.Bold else null)
             }
             TextButton(onClick = { viewModel.setDistanceUnit(DistanceUnit.MI) }) {
-                Text("Miles", fontWeight = if (state.distanceUnit == DistanceUnit.MI) androidx.compose.ui.text.font.FontWeight.Bold else null)
+                Text("Miles", fontWeight = if (state.settings.distanceUnit == DistanceUnit.MI) androidx.compose.ui.text.font.FontWeight.Bold else null)
             }
         }
     }

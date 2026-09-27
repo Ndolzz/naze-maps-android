@@ -90,7 +90,7 @@ fun DistanceScreen(modifier: Modifier = Modifier) {
                 scope.launch {
                     val resolved = mutableListOf<GeoPoint>()
                     for (p in filled) {
-                        val loc = state.myLocation
+                        val loc = state.location.myLocation
                         if (p.value.trim().equals("lokasi saya", ignoreCase = true) && loc != null) {
                             resolved.add(GeoPoint(loc.latitude, loc.longitude, p.label))
                             continue
@@ -110,7 +110,7 @@ fun DistanceScreen(modifier: Modifier = Modifier) {
                         totalKm += DistanceUtils.haversineKm(resolved[i], resolved[i + 1])
                     }
                     val minutes = DistanceUtils.etaMinutes(totalKm, travelMode)
-                    resultText = "${DistanceUtils.format(totalKm, state.distanceUnit)} • $minutes menit"
+                    resultText = "${DistanceUtils.format(totalKm, state.settings.distanceUnit)} â¢ $minutes menit"
                     isCalculating = false
                 }
             },

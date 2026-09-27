@@ -35,18 +35,43 @@ sealed class MapBanner {
     data class Generic(val message: String) : MapBanner()
 }
 
-data class MapUiState(
+/**
+ * TASK-010 (ADR-003): MapUiState is split per feature so each screen only depends on the
+ * slice of state it actually renders, and every update site names the feature it touches.
+ * Pure reshuffle — no behavior change.
+ */
+data class LocationState(
     val myLocation: NazeLocation? = null,
     val headingDegrees: Float? = null,
     val isTrackingMe: Boolean = false,
-    val searchQuery: String = "",
-    val searchResults: List<NominatimResult> = emptyList(),
+)
+
+data class SearchState(
+    val query: String = "",
+    val results: List<NominatimResult> = emptyList(),
     val isSearching: Boolean = false,
+)
+
+data class RouteState(
     val selectedPlace: NominatimResult? = null,
     val activeRoute: OsrmRoute? = null,
+)
+
+data class MapViewState(
+    val isSatelliteOn: Boolean = false,
+)
+
+data class SettingsState(
     val distanceUnit: DistanceUnit = DistanceUnit.KM,
     val isDarkTheme: Boolean = true,
-    val isSatelliteOn: Boolean = false,
+)
+
+data class MapUiState(
+    val location: LocationState = LocationState(),
+    val search: SearchState = SearchState(),
+    val route: RouteState = RouteState(),
+    val map: MapViewState = MapViewState(),
+    val settings: SettingsState = SettingsState(),
     val banner: MapBanner? = null,
 )
 
@@ -80,10 +105,10 @@ class MapViewModel @JvmOverloads constructor(
 
     init {
         viewModelScope.launch {
-            settings.isDarkTheme.collect { dark -> _uiState.update { it.copy(isDarkTheme = dark) } }
+            settings.isDarkTheme.collect { dark -> _uiState.update { it.copy(settings = it.settings.copy(isDarkTheme = dark)) } }
         }
         viewModelScope.launch {
-            settings.distanceUnit.collect { unit -> _uiState.update { it.copy(distanceUnit = unit) } }
+            settings.distanceUnit.collect { unit -> _uiState.update { it.copy(settings = it.settings.copy(distanceUnit = unit)) } }
         }
         viewModelScope.launch {
             connectivity.observe().collect { online ->
@@ -115,11 +140,11 @@ class MapViewModel @JvmOverloads constructor(
             _uiState.update { it.copy(banner = MapBanner.GpsOff) }
             return
         }
-        _uiState.update { it.copy(isTrackingMe = true, banner = null) }
+        _uiState.update { it.copy(location = it.location.copy(isTrackingMe = true), banner = null) }
         trackingJob?.cancel()
         trackingJob = viewModelScope.launch {
             locationRepo.observeLocation().collect { loc ->
-                _uiState.update { it.copy(myLocation = loc) }
+                _uiState.update { it.copy(location = it.location.copy(myLocation = loc)) }
             }
         }
         startCompass()
@@ -128,7 +153,7 @@ class MapViewModel @JvmOverloads constructor(
     fun stopTracking() {
         trackingJob?.cancel()
         compassJob?.cancel()
-        _uiState.update { it.copy(isTrackingMe = false) }
+        _uiState.update { it.copy(location = it.location.copy(isTrackingMe = false)) }
     }
 
     private fun startCompass() {
@@ -136,40 +161,40 @@ class MapViewModel @JvmOverloads constructor(
         compassJob?.cancel()
         compassJob = viewModelScope.launch {
             compassRepo.observeHeading().collect { heading ->
-                _uiState.update { it.copy(headingDegrees = heading) }
+                _uiState.update { it.copy(location = it.location.copy(headingDegrees = heading)) }
             }
         }
     }
 
     fun onSearchQueryChange(query: String) {
-        _uiState.update { it.copy(searchQuery = query) }
+        _uiState.update { it.copy(search = it.search.copy(query = query)) }
         searchJob?.cancel()
         if (query.isBlank()) {
-            _uiState.update { it.copy(searchResults = emptyList(), isSearching = false) }
+            _uiState.update { it.copy(search = it.search.copy(results = emptyList(), isSearching = false)) }
             return
         }
         searchJob = viewModelScope.launch {
-            _uiState.update { it.copy(isSearching = true) }
+            _uiState.update { it.copy(search = it.search.copy(isSearching = true)) }
             kotlinx.coroutines.delay(350) // light debounce so we don't hit Nominatim on every keystroke
             when (val outcome = searchRepo.search(query)) {
                 is SearchOutcome.Success -> _uiState.update {
-                    it.copy(searchResults = outcome.results, isSearching = false, banner = null)
+                    it.copy(search = it.search.copy(results = outcome.results, isSearching = false), banner = null)
                 }
                 SearchOutcome.Empty -> _uiState.update {
-                    it.copy(searchResults = emptyList(), isSearching = false)
+                    it.copy(search = it.search.copy(results = emptyList(), isSearching = false))
                 }
                 SearchOutcome.NoInternet -> _uiState.update {
-                    it.copy(isSearching = false, banner = MapBanner.NoInternet)
+                    it.copy(search = it.search.copy(isSearching = false), banner = MapBanner.NoInternet)
                 }
                 is SearchOutcome.Error -> _uiState.update {
-                    it.copy(isSearching = false, banner = MapBanner.Generic(outcome.message))
+                    it.copy(search = it.search.copy(isSearching = false), banner = MapBanner.Generic(outcome.message))
                 }
             }
         }
     }
 
     fun selectPlace(place: NominatimResult) {
-        _uiState.update { it.copy(selectedPlace = place, searchResults = emptyList(), searchQuery = "") }
+        _uiState.update { it.copy(route = it.route.copy(selectedPlace = place), search = it.search.copy(results = emptyList(), query = "")) }
         viewModelScope.launch {
             historyRepo.record(place.mainText, place.subText, place.latitude, place.longitude)
         }
@@ -183,7 +208,7 @@ class MapViewModel @JvmOverloads constructor(
             lat = entry.latitude.toString(),
             lon = entry.longitude.toString(),
         )
-        _uiState.update { it.copy(selectedPlace = place, searchResults = emptyList()) }
+        _uiState.update { it.copy(route = it.route.copy(selectedPlace = place), search = it.search.copy(results = emptyList())) }
     }
 
     fun deleteHistoryEntry(entry: HistoryEntity) {
@@ -195,15 +220,15 @@ class MapViewModel @JvmOverloads constructor(
     }
 
     fun clearSelection() {
-        _uiState.update { it.copy(selectedPlace = null, activeRoute = null) }
+        _uiState.update { it.copy(route = it.route.copy(selectedPlace = null, activeRoute = null)) }
     }
 
     fun requestRoute(to: GeoPoint, profile: RoutingProfile) {
         // TASK-008a (BUG-002): tell the user to enable My Location instead of failing silently.
-        val from = _uiState.value.myLocation
+        val from = _uiState.value.location.myLocation
         if (from == null) {
             _uiState.update {
-                it.copy(banner = MapBanner.Generic("Lokasi saya belum tersedia — aktifkan My Location dulu"))
+                it.copy(banner = MapBanner.Generic("Lokasi saya belum tersedia â aktifkan My Location dulu"))
             }
             return
         }
@@ -212,7 +237,7 @@ class MapViewModel @JvmOverloads constructor(
                 GeoPoint(from.latitude, from.longitude), to, profile,
             )) {
                 is RouteOutcome.Success -> _uiState.update {
-                    it.copy(activeRoute = outcome.routes.first(), banner = null)
+                    it.copy(route = it.route.copy(activeRoute = outcome.routes.first()), banner = null)
                 }
                 RouteOutcome.NoInternet -> _uiState.update { it.copy(banner = MapBanner.NoInternet) }
                 RouteOutcome.NoRouteFound -> _uiState.update {
@@ -247,11 +272,11 @@ class MapViewModel @JvmOverloads constructor(
     }
 
     fun toggleSatellite() {
-        _uiState.update { it.copy(isSatelliteOn = !it.isSatelliteOn) }
+        _uiState.update { it.copy(map = it.map.copy(isSatelliteOn = !it.map.isSatelliteOn)) }
     }
 
     fun toggleTheme() {
-        viewModelScope.launch { settings.setDarkTheme(!_uiState.value.isDarkTheme) }
+        viewModelScope.launch { settings.setDarkTheme(!_uiState.value.settings.isDarkTheme) }
     }
 
     fun setDistanceUnit(unit: DistanceUnit) {

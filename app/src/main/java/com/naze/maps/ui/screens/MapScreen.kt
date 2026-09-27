@@ -91,9 +91,9 @@ fun MapScreen(modifier: Modifier = Modifier) {
     }
 
     // Recenter camera whenever a fresh location arrives while tracking is on.
-    LaunchedEffect(state.myLocation, state.isTrackingMe) {
-        val loc = state.myLocation
-        if (loc != null && state.isTrackingMe) {
+    LaunchedEffect(state.location.myLocation, state.location.isTrackingMe) {
+        val loc = state.location.myLocation
+        if (loc != null && state.location.isTrackingMe) {
             maplibreMap?.cameraPosition = CameraPosition.Builder()
                 .target(LatLng(loc.latitude, loc.longitude))
                 .build()
@@ -102,35 +102,35 @@ fun MapScreen(modifier: Modifier = Modifier) {
 
     // TASK-008b (BUG-004): selecting a place (from search or history) now moves the camera to
     // it, so the user is not left staring at an unrelated area behind the bottom sheet.
-    LaunchedEffect(state.selectedPlace, maplibreMap) {
-        val place = state.selectedPlace ?: return@LaunchedEffect
+    LaunchedEffect(state.route.selectedPlace, maplibreMap) {
+        val place = state.route.selectedPlace ?: return@LaunchedEffect
         maplibreMap?.animateCamera(
             CameraUpdateFactory.newLatLngZoom(LatLng(place.latitude, place.longitude), 15.0)
         )
     }
 
-    // Draw (or clear) the "my location" dot independently of camera tracking — it should show
+    // Draw (or clear) the "my location" dot independently of camera tracking â it should show
     // wherever we last heard from GPS, whether or not the camera is actively following it.
-    LaunchedEffect(state.myLocation, mapStyle) {
-        mapStyle?.updateLocationDot(state.myLocation?.latitude, state.myLocation?.longitude)
+    LaunchedEffect(state.location.myLocation, mapStyle) {
+        mapStyle?.updateLocationDot(state.location.myLocation?.latitude, state.location.myLocation?.longitude)
     }
 
     // Draw (or clear) the active route's line. Re-fires on style reload (e.g. theme switch)
     // since MapLibre drops custom sources/layers whenever setStyle() runs.
-    LaunchedEffect(state.activeRoute, mapStyle) {
-        mapStyle?.updateRouteLine(state.activeRoute)
+    LaunchedEffect(state.route.activeRoute, mapStyle) {
+        mapStyle?.updateRouteLine(state.route.activeRoute)
     }
 
-    // Applies the satellite toggle to whichever Style instance is currently loaded — also
+    // Applies the satellite toggle to whichever Style instance is currently loaded â also
     // re-fires after a style reload so the toggle survives a theme switch.
-    LaunchedEffect(state.isSatelliteOn, mapStyle) {
-        mapStyle?.setSatelliteVisible(state.isSatelliteOn)
+    LaunchedEffect(state.map.isSatelliteOn, mapStyle) {
+        mapStyle?.setSatelliteVisible(state.map.isSatelliteOn)
     }
 
     Box(modifier = modifier.fillMaxSize()) {
         MapLibreMapView(
             modifier = Modifier.fillMaxSize(),
-            styleUrl = MapStyle.forTheme(state.isDarkTheme),
+            styleUrl = MapStyle.forTheme(state.settings.isDarkTheme),
             onMapReady = { map -> maplibreMap = map },
             onStyleLoaded = { style -> mapStyle = style },
         )
@@ -142,20 +142,20 @@ fun MapScreen(modifier: Modifier = Modifier) {
                 .padding(16.dp),
         ) {
             NazeSearchBar(
-                query = state.searchQuery,
+                query = state.search.query,
                 onQueryChange = viewModel::onSearchQueryChange,
                 onClear = { viewModel.onSearchQueryChange("") },
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            if (state.searchResults.isNotEmpty()) {
+            if (state.search.results.isNotEmpty()) {
                 Surface(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     shape = MaterialTheme.shapes.large,
                     tonalElevation = 4.dp,
                 ) {
                     LazyColumn(modifier = Modifier.padding(vertical = 4.dp)) {
-                        items(state.searchResults) { result ->
+                        items(state.search.results) { result ->
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -168,8 +168,8 @@ fun MapScreen(modifier: Modifier = Modifier) {
                         }
                     }
                 }
-            } else if (state.searchQuery.isBlank() && history.isNotEmpty()) {
-                // Riwayat lokasi — muncul saat kotak pencarian kosong, hilang begitu ada hasil pencarian.
+            } else if (state.search.query.isBlank() && history.isNotEmpty()) {
+                // Riwayat lokasi â muncul saat kotak pencarian kosong, hilang begitu ada hasil pencarian.
                 Surface(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     shape = MaterialTheme.shapes.large,
@@ -229,7 +229,7 @@ fun MapScreen(modifier: Modifier = Modifier) {
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     CompassFab(
-                        headingDegrees = state.headingDegrees,
+                        headingDegrees = state.location.headingDegrees,
                         onResetNorth = {
                             maplibreMap?.let { map ->
                                 map.cameraPosition = CameraPosition.Builder()
@@ -241,14 +241,14 @@ fun MapScreen(modifier: Modifier = Modifier) {
                         },
                     )
                     LayersFab(
-                        isActive = state.isSatelliteOn,
+                        isActive = state.map.isSatelliteOn,
                         onClick = viewModel::toggleSatellite,
                     )
                     MyLocationFab(
-                        isActive = state.isTrackingMe,
+                        isActive = state.location.isTrackingMe,
                         onClick = {
                             if (permissionState.allPermissionsGranted) {
-                                if (state.isTrackingMe) viewModel.stopTracking() else viewModel.startTracking()
+                                if (state.location.isTrackingMe) viewModel.stopTracking() else viewModel.startTracking()
                             } else {
                                 permissionState.launchMultiplePermissionRequest()
                             }
@@ -258,7 +258,7 @@ fun MapScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        // Selalu di atas — biar buka app gak pernah nge-flash peta kosong/abu-abu sebelum
+        // Selalu di atas â biar buka app gak pernah nge-flash peta kosong/abu-abu sebelum
         // style dan tile pertama kelar dimuat. Fade out mulus begitu peta siap.
         AnimatedVisibility(
             visible = mapStyle == null,
@@ -268,7 +268,7 @@ fun MapScreen(modifier: Modifier = Modifier) {
             MapLoadingOverlay()
         }
 
-        state.selectedPlace?.let { place ->
+        state.route.selectedPlace?.let { place ->
             ModalBottomSheet(onDismissRequest = viewModel::clearSelection) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(place.mainText, style = MaterialTheme.typography.titleMedium)
@@ -321,7 +321,7 @@ fun MapScreen(modifier: Modifier = Modifier) {
                         }
                     }
                     // Catatan: OSRM demo server publik (router.project-osrm.org) kadang cuma
-                    // andal untuk profil mobil — kalau jalan kaki/sepeda gagal, banner
+                    // andal untuk profil mobil â kalau jalan kaki/sepeda gagal, banner
                     // "Rute tidak ditemukan" akan muncul otomatis lewat RouteOutcome di atas.
 
                     Row(
