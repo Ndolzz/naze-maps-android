@@ -49,12 +49,13 @@ Format per bug; severity berdasar dampak & evidence kode, bukan perkiraan.
 
 ## BUG-005 — Race condition update MapUiState (lost update)
 - Severity: MEDIUM
-- Reproduction: race antara settings collect, tracking collect, compass collect, search job — semua melakukan _uiState.value = _uiState.value.copy(...)
+- Reproduction: race antara settings collect, tracking collect, compass collect, search job — semuanya melakukan read-modify-write paralel
 - Expected: update state atomik
-- Actual: read-modify-write non-atomik dari >=4 coroutine paralel; update bisa saling menimpa
-- Evidence: MapViewModel (semua assignment _uiState)
+- Actual: read-modify-write non-atomik; update bisa saling menimpa
+- Evidence: MapViewModel (semua assignment _uiState) — audit awal
 - Affected files: ui/screens/MapViewModel.kt
-- Status: OPEN (dampak probabilistik; fix: MutableStateFlow.update — TASK-004)
+- Status: FIXED — TASK-004 commit c583eb7 (semua tulis via `MutableStateFlow.update {}`); menunggu verifikasi CI + regression
+- Fix verified: build CI c583eb7 — UNKNOWN (belum terinspeksi)
 
 ## BUG-006 — "lokasi saya" di DistanceScreen gagal menyesatkan bila GPS belum ada
 - Severity: MEDIUM
@@ -69,11 +70,11 @@ Format per bug; severity berdasar dampak & evidence kode, bukan perkiraan.
 - Severity: LOW
 - Evidence: HistoryDao (LIMIT 20, trim LIMIT 30)
 - Affected files: history/HistoryDao.kt
-- Status: OPEN (behaviour masih konsisten-ish; konvensi ambigu)
+- Status: OPEN
 
 ## BUG-008 — Nominatim: tanpa accept-language; debounce 350ms agresif
 - Severity: MEDIUM (risiko diblokir Nominatim 403)
-- KOREKSI AUDIT: NominatimApi TIDAK kosong parameter — sudah mengirim format=json, addressdetails=1, limit=8. Yang belum ada: accept-language; dan debounce 350ms per keystroke tetap agresif terhadap usage policy Nominatim (1 req/s untuk aplikasi berat).
+- KOREKSI AUDIT: NominatimApi sudah mengirim format=json, addressdetails=1, limit=8. Yang belum ada: accept-language; debounce 350ms per keystroke agresif terhadap usage policy Nominatim.
 - Evidence: search/NominatimApi.kt; MapViewModel debounce 350
 - Affected files: search/NominatimApi.kt, ui/screens/MapViewModel.kt
 - Status: OPEN — TASK-011 (verifikasi policy dulu)
@@ -100,26 +101,44 @@ Format per bug; severity berdasar dampak & evidence kode, bukan perkiraan.
 - Severity: MEDIUM
 - Evidence: comment di LocationRepository ("collectors should cancel when the map leaves the foreground") vs NazeNavHost yang membongkar MapScreen tanpa memanggil stopTracking
 - Affected files: ui/navigation/NazeNavHost.kt, ui/screens/MapViewModel.kt
-- Status: OPEN (perlu keputusan spec: hentikan di tab lain atau tetap? — ADR-005)
+- Status: OPEN (perlu keputusan spec — ADR-005)
 
 ## BUG-013 — Build lokal rusak: gradlew/gradle-wrapper.jar tidak ada di repo
 - Severity: MEDIUM (DX; CI punya workaround)
 - Evidence: file tree tidak berisi gradlew/gradlew.bat/gradle-wrapper.jar
 - Affected files: repo root
-- Status: IN PROGRESS — TASK-002 workflow `generate-gradle-wrapper.yml` akan auto-commit wrapper pada push berikutnya.
+- Status: IN PROGRESS — TASK-002 workflow `generate-gradle-wrapper.yml` commit c7ada9d; konfirmasi commit wrapper oleh CI masih UNKNOWN.
 
-## BUG-014 — Locale-dependent number formatting di DistanceUtils.format (ditemukan saat TASK-003)
+## BUG-014 — Locale-dependent number formatting di DistanceUtils.format
 - Severity: LOW
-- Reproduction: set device locale ID/DE → hasil "1,2 km" (koma); locale EN → "1.2 km"
-- Expected: format konsisten (keputusan produk: Locale.US tetap vs ikut locale user)
-- Actual: `"%.1f km".format(km)` memakai default locale — tidak deterministik lintas device
+- Reproduction: set device locale ID/DE → "1,2 km"; locale EN → "1.2 km"
+- Expected: format konsisten (keputusan produk)
+- Actual: `"%.1f km".format(km)` memakai default locale
 - Evidence: utils/DistanceUtils.kt; characterization test sengaja tidak assert exact-string
 - Affected files: utils/DistanceUtils.kt
-- Status: OPEN (keputusan produk dulu, baru fix; test sudah menghindari dependensi locale)
+- Status: OPEN (keputusan produk dulu, baru fix)
+
+## BUG-015 — CI release build flaky: lintVitalAnalyzeRelease timeout download dependency (BARU, dari log CI c7ada9d)
+- Severity: MEDIUM (hanya jalur release; debug tidak terdampak)
+- Affected feature: CI/CD (assembleRelease di main)
+- Reproduction: run "Android Build" pada push main; step assembleRelease
+- Expected: assembleRelease selesai (unsigned APK)
+- Actual: `lintVitalAnalyzeRelease` FAILED — "Could not download intellij-core-31.5.2.jar ... Read timed out" dari dl.google.com; BUILD FAILED in 5m32s
+- Expected vs actual: bukan defect kode — kegagalan jaringan transien saat mengunduh dependency lint
+- Possible root cause: transient network timeout dl.google.com; kemungkinan diperparah step lint ~5 menit tanpa cache dependency lint
+- Evidence: log CI run c7ada9d (2026-09-27T17:02:26Z): assembleDebug SUCCESSFUL, assembleRelease FAILED pada download intellij-core
+- Affected files: .github/workflows/android-build.yml
+- Risk: status commit main tampak merah meski kode sehat; noise regression check
+- Status: OPEN — mitigasi di TASK-013 (retry/cache); rerun manual biasanya cukup untuk run transien ini
+- Catatan verifikasi CI c7ada9d: **assembleDebug BUILD SUCCESSFUL in 3m20s — CONFIRMED kode compile.**
+
+## Deprecation warnings tercatat dari log CI (technical debt, bukan bug)
+- SearchBar.kt:42 `outlinedTextFieldColors` deprecated → `OutlinedTextFieldDefaults.colors`
+- MapScreen.kt:293/306 `Icons.Filled.DirectionsWalk/DirectionsBike` → `Icons.AutoMirrored.Filled` (lihat technical-debt TD-CQ-5)
 
 ## Potential (belum ada evidence runtime)
 
 - P-1: CompassFab -headingDegrees rotasi vs screen rotation (landscape) — UNKNOWN.
-- P-2: Proguard release: rules 257 byte; MapLibre/Retrofit/Gson keep rules mungkin kurang → release build bisa crash. UNKNOWN (apakah release APK pernah dijalankan).
-- P-3: Race setStyle saat toggle tema cepat (style reload drop overlays) — mitigasi sudah ada via LaunchedEffect, tetap UNKNOWN edge.
-- P-4: selectHistoryEntry tidak record ulang & tidak fly-to (jika PWA expect "bump to top").
+- P-2: Proguard release: rules 257 byte; MapLibre/Retrofit/Gson keep rules mungkin kurang → release build bisa crash. UNKNOWN (apakah release APK pernah dijalankan). Catatan: karena lintVital gagal di CI (BUG-015), release APK terakhir yang pasti ter-build juga UNKNOWN.
+- P-3: Race setStyle saat toggle tema cepat — mitigasi sudah ada via LaunchedEffect, tetap UNKNOWN edge.
+- P-4: selectHistoryEntry tidak record ulang & tidak fly-to.
