@@ -28,9 +28,10 @@ class MainActivity : ComponentActivity() {
             val sharedViewModel: MapViewModel = viewModel()
             val uiState by sharedViewModel.uiState.collectAsState()
 
-            NazeMapsTheme(darkTheme = uiState.isDarkTheme) {
+            NazeMapsTheme(darkTheme = uiState.settings.isDarkTheme) {
                 NazeNavHost()
             }
         }
     }
 }
+
