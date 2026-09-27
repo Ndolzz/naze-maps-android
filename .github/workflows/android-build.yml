@@ -38,6 +38,9 @@ jobs:
       - name: Build debug APK
         run: gradle assembleDebug --no-daemon
 
+      - name: Run unit tests (characterization — SDD TASK-003)
+        run: gradle test --no-daemon
+
       - name: Build release APK (unsigned)
         if: github.ref == 'refs/heads/main'
         run: gradle assembleRelease --no-daemon
