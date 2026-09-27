@@ -62,6 +62,7 @@ import com.naze.maps.ui.components.MyLocationFab
 import com.naze.maps.ui.components.NazeSearchBar
 import com.naze.maps.utils.GeoPoint
 import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
@@ -97,6 +98,15 @@ fun MapScreen(modifier: Modifier = Modifier) {
                 .target(LatLng(loc.latitude, loc.longitude))
                 .build()
         }
+    }
+
+    // TASK-008b (BUG-004): selecting a place (from search or history) now moves the camera to
+    // it, so the user is not left staring at an unrelated area behind the bottom sheet.
+    LaunchedEffect(state.selectedPlace, maplibreMap) {
+        val place = state.selectedPlace ?: return@LaunchedEffect
+        maplibreMap?.animateCamera(
+            CameraUpdateFactory.newLatLngZoom(LatLng(place.latitude, place.longitude), 15.0)
+        )
     }
 
     // Draw (or clear) the "my location" dot independently of camera tracking — it should show
