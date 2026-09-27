@@ -84,10 +84,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
             connectivity.observe().collect { online ->
                 _uiState.update { state ->
                     when {
-                        // Back online: clear a stale offline banner (only that one).
                         online -> if (state.banner == MapBanner.NoInternet) state.copy(banner = null) else state
-                        // Lost connection: raise the offline banner, but do not overwrite a
-                        // more specific banner (permission / GPS) that the user is acting on.
                         else -> if (state.banner == null) state.copy(banner = MapBanner.NoInternet) else state
                     }
                 }
@@ -197,7 +194,15 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun requestRoute(to: GeoPoint, profile: RoutingProfile) {
-        val from = _uiState.value.myLocation ?: return
+        // TASK-008 (BUG-002): previously `?: return` left the user without any feedback when
+        // no GPS fix was available. Now the user is told to enable My Location first.
+        val from = _uiState.value.myLocation
+        if (from == null) {
+            _uiState.update {
+                it.copy(banner = MapBanner.Generic("Lokasi saya belum tersedia — aktifkan My Location dulu"))
+            }
+            return
+        }
         viewModelScope.launch {
             when (val outcome = routingRepo.getRoute(
                 GeoPoint(from.latitude, from.longitude), to, profile,
