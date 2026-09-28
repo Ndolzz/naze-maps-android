@@ -65,6 +65,7 @@ import com.naze.maps.ui.components.MapLoadingOverlay
 import com.naze.maps.ui.components.MyLocationFab
 import com.naze.maps.ui.components.NazeSearchBar
 import com.naze.maps.ui.components.SplashOverlay
+import com.naze.maps.utils.DistanceUtils
 import com.naze.maps.utils.GeoPoint
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -432,6 +433,47 @@ fun MapScreen(modifier: Modifier = Modifier) {
                             context.startActivity(Intent.createChooser(sendIntent, "Bagikan lokasi"))
                         }) {
                             Icon(Icons.Filled.Share, contentDescription = "Share")
+                        }
+                    }
+
+                    // CH-107: bagikan ringkasan rute aktif (jarak + waktu OSRM + tautan).
+                    state.route.activeRoute?.let { route ->
+                        OutlinedButton(
+                            onClick = {
+                                val routeKm = route.distanceMeters / 1000.0
+                                val minutes = (route.durationSeconds / 60.0).toInt()
+                                val distanceText = DistanceUtils.format(routeKm, state.settings.distanceUnit)
+                                val placeUrl = "https://www.openstreetmap.org/?mlat=" + place.latitude + "&mlon=" + place.longitude +
+                                    "#map=17/" + place.latitude + "/" + place.longitude
+                                val origin = state.location.myLocation
+                                val link = if (origin != null) {
+                                    "https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=" +
+                                        String.format(
+                                            Locale.US,
+                                            "%.6f,%.6f;%.6f,%.6f",
+                                            origin.latitude, origin.longitude, place.latitude, place.longitude,
+                                        )
+                                } else placeUrl
+                                val shareText = "Rute ke " + place.mainText + "
+" +
+                                    "Jarak " + distanceText + "
+" +
+                                    "Perkiraan waktu " + minutes + " menit
+" + link
+                                val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                }
+                                context.startActivity(Intent.createChooser(sendIntent, "Bagikan rute"))
+                            },
+                            modifier = Modifier.padding(top = 10.dp),
+                        ) {
+                            Icon(
+                                Icons.Filled.Share,
+                                contentDescription = "Bagikan rute",
+                                modifier = Modifier.padding(end = 6.dp),
+                            )
+                            Text("Bagikan rute")
                         }
                     }
                 }
