@@ -109,7 +109,7 @@ fun MapScreen(modifier: Modifier = Modifier) {
         )
     }
 
-    // Draw (or clear) the "my location" dot independently of camera tracking â it should show
+    // Draw (or clear) the "my location" dot independently of camera tracking — it should show
     // wherever we last heard from GPS, whether or not the camera is actively following it.
     LaunchedEffect(state.location.myLocation, mapStyle) {
         mapStyle?.updateLocationDot(state.location.myLocation?.latitude, state.location.myLocation?.longitude)
@@ -121,7 +121,7 @@ fun MapScreen(modifier: Modifier = Modifier) {
         mapStyle?.updateRouteLine(state.route.activeRoute)
     }
 
-    // Applies the satellite toggle to whichever Style instance is currently loaded â also
+    // Applies the satellite toggle to whichever Style instance is currently loaded — also
     // re-fires after a style reload so the toggle survives a theme switch.
     LaunchedEffect(state.map.isSatelliteOn, mapStyle) {
         mapStyle?.setSatelliteVisible(state.map.isSatelliteOn)
@@ -141,11 +141,13 @@ fun MapScreen(modifier: Modifier = Modifier) {
                 .systemBarsPadding()
                 .padding(16.dp),
         ) {
+            // CH-101: search bar reserves end space so it never runs under the
+            // top-end overflow menu overlay (menu = 40dp + 12dp margin).
             NazeSearchBar(
                 query = state.search.query,
                 onQueryChange = viewModel::onSearchQueryChange,
                 onClear = { viewModel.onSearchQueryChange("") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(end = 56.dp),
             )
 
             if (state.search.results.isNotEmpty()) {
@@ -169,7 +171,7 @@ fun MapScreen(modifier: Modifier = Modifier) {
                     }
                 }
             } else if (state.search.query.isBlank() && history.isNotEmpty()) {
-                // Riwayat lokasi â muncul saat kotak pencarian kosong, hilang begitu ada hasil pencarian.
+                // Riwayat lokasi — muncul saat kotak pencarian kosong, hilang begitu ada hasil pencarian.
                 Surface(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     shape = MaterialTheme.shapes.large,
@@ -258,7 +260,7 @@ fun MapScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        // Selalu di atas â biar buka app gak pernah nge-flash peta kosong/abu-abu sebelum
+        // Selalu di atas — biar buka app gak pernah nge-flash peta kosong/abu-abu sebelum
         // style dan tile pertama kelar dimuat. Fade out mulus begitu peta siap.
         AnimatedVisibility(
             visible = mapStyle == null,
@@ -321,7 +323,7 @@ fun MapScreen(modifier: Modifier = Modifier) {
                         }
                     }
                     // Catatan: OSRM demo server publik (router.project-osrm.org) kadang cuma
-                    // andal untuk profil mobil â kalau jalan kaki/sepeda gagal, banner
+                    // andal untuk profil mobil — kalau jalan kaki/sepeda gagal, banner
                     // "Rute tidak ditemukan" akan muncul otomatis lewat RouteOutcome di atas.
 
                     Row(
