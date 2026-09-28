@@ -48,7 +48,8 @@ Format per bug; severity berdasar dampak & evidence kode, bukan perkiraan.
 
 ## BUG-011 — Dependency navigation-compose tidak dipakai
 - Severity: LOW
-- Status: FIXED (TASK-012, 664c593). CI pending sebelum CLOSED final.
+- Status: FIXED (TASK-012, 664c593). CI pending s
+ebelum CLOSED final.
 
 ## BUG-012 — Tracking location tetap jalan saat user pindah tab
 - Severity: MEDIUM
@@ -78,12 +79,19 @@ Format per bug; severity berdasar dampak & evidence kode, bukan perkiraan.
 
 ## BUG-018 — Splash generik: launcher icon tanpa motion, tanpa identitas brand
 - Severity: LOW (UX)
-- Status: FIXED (CH-102): SplashOverlay "Map Comes Alive", readiness-driven. CI + regression manual pending sebelum CLOSED final.
+- Status: FIXED (CH-102): SplashOverlay "Map Comes Alive", readiness-driven. CI + regression manual pendin
+g sebelum CLOSED final.
 
 ## BUG-019 — Kompas menumpuk/berasa tidak rapi di area kanan map
 - Severity: LOW (UX)
 - Root cause (CONFIRMED, evidence screenshot device 2026-09-28 17:16): CompassFab berada di kolom FAB kanan-bawah sementara menu [⋮] + search bar end berdesakan di kanan-atas; hierarchy kontrol kanan tidak konsisten.
 - Status: FIXED (CH-103): CompassFab dipindah ke top-end tepat di bawah tombol [⋮] (statusBarsPadding + top 60dp + end 12dp); kolom kanan-bawah kini hanya Layers + MyLocation. Behavior kompas tidak berubah. CI + regression manual pending sebelum CLOSED final.
+
+## BUG-021 — MapScreen.kt: newline mentah di dalam string Kotlin (build gagal kspDebugKotlin)
+- Severity: HIGH (build gagal total, PR #1 merah).
+- Root cause (CONFIRMED, evidence CI build 209b238, Expecting quotation mark baris 430-462): literal escape newline pada teks bagikan ditulis melalui template literal TypeScript tanpa escape ganda, sehingga yang tersimpan adalah newline mentah di dalam string Kotlin (4 kemunculan: bagikan lokasi + bagikan rute).
+- Catatan proses: bukan korupsi transit GitHub. Deteksi indikasi transit (token terbelah) ternyata artefak fetch raw; CI hanya melaporkan error string, tidak ada identifier rusak.
+- Status: FIXED (09e689f): tiap newline mentah dalam string diganti kembali menjadi literal escape. Verifikasi fetch balik: 4 literal escape ada, 0 newline mentah. CI + regression pending sebelum CLOSED final.
 
 ## Deprecation warnings (technical debt, bukan bug)
 - SearchBar.kt outlinedTextFieldColors → TERATASI CH-101.
