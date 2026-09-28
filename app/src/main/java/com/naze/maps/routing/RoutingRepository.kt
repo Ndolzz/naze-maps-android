@@ -12,10 +12,15 @@ sealed class RouteOutcome {
     data class Error(val message: String) : RouteOutcome()
 }
 
-class RoutingRepository(
+/** TASK-010b: abstraction so MapViewModel can be unit-tested with fakes. */
+interface RoutingRepository {
+    suspend fun getRoute(from: GeoPoint, to: GeoPoint, profile: RoutingProfile): RouteOutcome
+}
+
+class RoutingRepositoryImpl(
     private val api: OsrmApi = NetworkModule.create(OsrmApi.BASE_URL, OsrmApi::class.java),
-) {
-    suspend fun getRoute(from: GeoPoint, to: GeoPoint, profile: RoutingProfile): RouteOutcome {
+) : RoutingRepository {
+    override suspend fun getRoute(from: GeoPoint, to: GeoPoint, profile: RoutingProfile): RouteOutcome {
         val coords = String.format(
             Locale.US, "%f,%f;%f,%f", from.lng, from.lat, to.lng, to.lat,
         )

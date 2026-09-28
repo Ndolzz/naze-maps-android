@@ -30,15 +30,24 @@ private fun Location.toNaze() = NazeLocation(
 )
 
 /**
+ * TASK-010b: abstraction so MapViewModel can be unit-tested with fakes
+ * (ADR-002 — the interface stays hand-rolled, no DI framework).
+ */
+interface LocationRepository {
+    suspend fun getCurrentLocationOnce(): NazeLocation?
+    fun observeLocation(intervalMs: Long = 3000L): Flow<NazeLocation>
+}
+
+/**
  * Wraps Play Services FusedLocationProviderClient. Used only for positioning — this app has
  * no dependency on Google Maps SDK, so it stays usable regardless of map engine choice.
  */
-class LocationRepository(context: Context) {
+class LocationRepositoryImpl(context: Context) : LocationRepository {
     private val client: FusedLocationProviderClient =
         LocationServices.getFusedLocationProviderClient(context.applicationContext)
 
     @SuppressLint("MissingPermission") // caller must check PermissionUtils.hasLocationPermission first
-    suspend fun getCurrentLocationOnce(): NazeLocation? {
+    override suspend fun getCurrentLocationOnce(): NazeLocation? {
         val request = CurrentLocationRequest.Builder()
             .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
             .build()
@@ -52,7 +61,7 @@ class LocationRepository(context: Context) {
      * (collectors should cancel when the map leaves the foreground).
      */
     @SuppressLint("MissingPermission")
-    fun observeLocation(intervalMs: Long = 3000L): Flow<NazeLocation> = callbackFlow {
+    override fun observeLocation(intervalMs: Long): Flow<NazeLocation> = callbackFlow {
         val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, intervalMs)
             .setMinUpdateIntervalMillis(intervalMs / 2)
             .build()

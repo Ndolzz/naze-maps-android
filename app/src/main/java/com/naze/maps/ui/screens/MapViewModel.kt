@@ -4,21 +4,29 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.naze.maps.data.SettingsDataStore
+import com.naze.maps.data.SettingsDataStoreImpl
 import com.naze.maps.favorites.FavoritesRepository
+import com.naze.maps.favorites.FavoritesRepositoryImpl
 import com.naze.maps.history.HistoryEntity
 import com.naze.maps.history.HistoryRepository
+import com.naze.maps.history.HistoryRepositoryImpl
 import com.naze.maps.location.CompassRepository
+import com.naze.maps.location.CompassRepositoryImpl
 import com.naze.maps.location.LocationRepository
+import com.naze.maps.location.LocationRepositoryImpl
 import com.naze.maps.location.NazeLocation
 import com.naze.maps.location.PermissionUtils
 import com.naze.maps.network.ConnectivityObserver
+import com.naze.maps.network.ConnectivityObserverImpl
 import com.naze.maps.routing.OsrmRoute
 import com.naze.maps.routing.RouteOutcome
 import com.naze.maps.routing.RoutingProfile
 import com.naze.maps.routing.RoutingRepository
+import com.naze.maps.routing.RoutingRepositoryImpl
 import com.naze.maps.search.NominatimResult
 import com.naze.maps.search.SearchOutcome
 import com.naze.maps.search.SearchRepository
+import com.naze.maps.search.SearchRepositoryImpl
 import com.naze.maps.utils.DistanceUnit
 import com.naze.maps.utils.GeoPoint
 import kotlinx.coroutines.Job
@@ -80,17 +88,19 @@ data class MapUiState(
  * defaults built from the Application, so production wiring is unchanged
  * (AndroidViewModelFactory still works via the @JvmOverloads single-arg constructor),
  * while unit tests can pass fakes for every dependency. No behavior change.
+ * TASK-010b: collaborator types are now hand-rolled interfaces (Impl suffix = production
+ * wiring), so unit tests can pass fakes without any Android framework.
  */
 class MapViewModel @JvmOverloads constructor(
     application: Application,
-    private val locationRepo: LocationRepository = LocationRepository(application),
-    private val compassRepo: CompassRepository = CompassRepository(application),
-    private val searchRepo: SearchRepository = SearchRepository(),
-    private val routingRepo: RoutingRepository = RoutingRepository(),
-    private val favoritesRepo: FavoritesRepository = FavoritesRepository(application),
-    private val historyRepo: HistoryRepository = HistoryRepository(application),
-    private val settings: SettingsDataStore = SettingsDataStore(application),
-    private val connectivity: ConnectivityObserver = ConnectivityObserver(application),
+    private val locationRepo: LocationRepository = LocationRepositoryImpl(application),
+    private val compassRepo: CompassRepository = CompassRepositoryImpl(application),
+    private val searchRepo: SearchRepository = SearchRepositoryImpl(),
+    private val routingRepo: RoutingRepository = RoutingRepositoryImpl(),
+    private val favoritesRepo: FavoritesRepository = FavoritesRepositoryImpl(application),
+    private val historyRepo: HistoryRepository = HistoryRepositoryImpl(application),
+    private val settings: SettingsDataStore = SettingsDataStoreImpl(application),
+    private val connectivity: ConnectivityObserver = ConnectivityObserverImpl(application),
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(MapUiState())

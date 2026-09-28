@@ -10,20 +10,26 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
+/** TASK-010b: abstraction so MapViewModel can be unit-tested with fakes. */
+interface CompassRepository {
+    val isAvailable: Boolean
+    fun observeHeading(): Flow<Float>
+}
+
 /**
  * Compass heading (0-360, 0 = true-ish North) from the rotation vector sensor.
  * Requirement #6: if the sensor isn't available, callers get null and should hide/disable
  * the compass button rather than fake a heading.
  */
-class CompassRepository(context: Context) {
+class CompassRepositoryImpl(context: Context) : CompassRepository {
     private val sensorManager = context.applicationContext
         .getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val rotationSensor: Sensor? =
         sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
 
-    val isAvailable: Boolean get() = rotationSensor != null
+    override val isAvailable: Boolean get() = rotationSensor != null
 
-    fun observeHeading(): Flow<Float> = callbackFlow {
+    override fun observeHeading(): Flow<Float> = callbackFlow {
         val sensor = rotationSensor
         if (sensor == null) {
             close()

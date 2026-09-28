@@ -10,10 +10,16 @@ sealed class SearchOutcome {
     data class Error(val message: String) : SearchOutcome()
 }
 
-class SearchRepository(
+/** TASK-010b: abstraction so MapViewModel can be unit-tested with fakes. */
+interface SearchRepository {
+    suspend fun search(query: String): SearchOutcome
+    suspend fun geocodeOne(query: String): NominatimResult?
+}
+
+class SearchRepositoryImpl(
     private val api: NominatimApi = NetworkModule.create(NominatimApi.BASE_URL, NominatimApi::class.java),
-) {
-    suspend fun search(query: String): SearchOutcome {
+) : SearchRepository {
+    override suspend fun search(query: String): SearchOutcome {
         if (query.isBlank()) return SearchOutcome.Empty
         return try {
             val results = api.search(query)
@@ -26,6 +32,6 @@ class SearchRepository(
     }
 
     /** Used by the distance calculator to resolve a single place name to coordinates. */
-    suspend fun geocodeOne(query: String): NominatimResult? =
+    override suspend fun geocodeOne(query: String): NominatimResult? =
         (search(query) as? SearchOutcome.Success)?.results?.firstOrNull()
 }
