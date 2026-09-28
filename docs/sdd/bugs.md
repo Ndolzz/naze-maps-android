@@ -49,6 +49,7 @@ Format per bug; severity berdasar dampak & evidence kode, bukan perkiraan.
 ## BUG-011 — Dependency navigation-compose tidak dipakai
 - Severity: LOW
 - Status: FIXED (TASK-012, 664c593). CI pending s
+
 ebelum CLOSED final.
 
 ## BUG-012 — Tracking location tetap jalan saat user pindah tab
@@ -79,8 +80,7 @@ ebelum CLOSED final.
 
 ## BUG-018 — Splash generik: launcher icon tanpa motion, tanpa identitas brand
 - Severity: LOW (UX)
-- Status: FIXED (CH-102): SplashOverlay "Map Comes Alive", readiness-driven. CI + regression manual pendin
-g sebelum CLOSED final.
+- Status: FIXED (CH-102): SplashOverlay "Map Comes Alive", readiness-driven. CI + regression manual pending sebelum CLOSED final.
 
 ## BUG-019 — Kompas menumpuk/berasa tidak rapi di area kanan map
 - Severity: LOW (UX)
@@ -102,5 +102,12 @@ g sebelum CLOSED final.
 - P-1: CompassFab -headingDegrees rotasi vs screen rotation (landscape) — UNKNOWN. (Semakin relevan setelah CH-103: cek di landscape.)
 - P-2: Proguard release keep-rules mungkin kurang → release bisa crash. UNKNOWN.
 - P-3: Race setStyle saat toggle tema cepat — mitigasi LaunchedEffect ada, edge UNKNOWN.
-- P-4: selectHistoryEntry tidak record ulang riwayat — konsisten baseline.
+- P-4: select
+HistoryEntry tidak record ulang riwayat — konsisten baseline.
 - P-5 (BERGESER ke BUG-019): overlap visual kontrol kanan-atas — kini FIXED (CH-103); sisa cek: overlap menu vs header screen non-map saat regression manual.
+
+## BUG-022 — FakeSettingsDataStore tidak mengikuti interface baru CH-111 (kompilasi test gagal)
+- Severity: HIGH (compileDebugUnitTestKotlin gagal; CI merah untuk commit CH-111 ke atas).
+- Root cause (CONFIRMED, inspeksi MapViewModelTest.kt): CH-111 menambah themeMode dan setThemeMode ke interface SettingsDataStore, tetapi FakeSettingsDataStore di unit test tidak diperbarui, sehingga fake tidak lagi mengimplementasikan interface (error: does not implement abstract member). Selain itu toggleTheme kini menulis mode, bukan sakelar dark_theme lama, sehingga assertion lama pada settings.darkTheme tidak lagi relevan.
+- Perbaikan: fake menambah MutableStateFlow themeMode (default DARK agar isDarkTheme awal tetap benar) dan setThemeMode; test toggleTheme diperbarui mengamati themeMode; ditambah test setThemeMode memastikan pilihan persist dan isDarkTheme mengikuti resolve LIGHT/DARK.
+- Status: FIXED pada commit perbaikan terisolasi. CI + regression pending sebelum CLOSED final.
