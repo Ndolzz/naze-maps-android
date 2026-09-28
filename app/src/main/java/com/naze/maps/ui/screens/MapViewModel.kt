@@ -1,10 +1,12 @@
 package com.naze.maps.ui.screens
 
 import android.app.Application
+import android.content.res.Configuration
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.naze.maps.data.SettingsDataStore
 import com.naze.maps.data.SettingsDataStoreImpl
+import com.naze.maps.data.ThemeMode
 import com.naze.maps.favorites.FavoriteEntity
 import com.naze.maps.favorites.FavoritesRepository
 import com.naze.maps.favorites.FavoritesRepositoryImpl
@@ -74,6 +76,8 @@ data class MapViewState(
 
 data class SettingsState(
     val distanceUnit: DistanceUnit = DistanceUnit.KM,
+    // CH-111: mode tema pilihan pengguna; isDarkTheme adalah nilai terresolve untuk UI.
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val isDarkTheme: Boolean = true,
 )
 
@@ -116,9 +120,25 @@ class MapViewModel @JvmOverloads constructor(
     private var compassJob: Job? = null
     private var searchJob: Job? = null
 
+    // CH-111: mode SYSTEM berarti mengikuti mode terang atau gelap perangkat saat ini.
+    private fun resolvedDark(mode: ThemeMode): Boolean = when (mode) {
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+        ThemeMode.SYSTEM -> {
+            val nightMode = getApplication<Application>().resources.configuration.uiMode and
+                Configuration.UI_MODE_NIGHT_MASK
+            nightMode == Configuration.UI_MODE_NIGHT_YES
+        }
+    }
+
     init {
         viewModelScope.launch {
-            settings.isDarkTheme.collect { dark -> _uiState.update { it.copy(settings = it.settings.copy(isDarkTheme = dark)) } }
+            // CH-111: koleksi mode tema; isDarkTheme adalah hasil resolve yang dipakai UI.
+            settings.themeMode.collect { mode ->
+                _uiState.update {
+                    it.copy(settings = it.settings.copy(themeMode = mode, isDarkTheme = resolvedDark(mode)))
+                }
+            }
         }
         viewModelScope.launch {
             settings.distanceUnit.collect { unit -> _uiState.update { it.copy(settings = it.settings.copy(distanceUnit = unit)) } }
@@ -313,8 +333,18 @@ class MapViewModel @JvmOverloads constructor(
         _uiState.update { it.copy(map = it.map.copy(isSatelliteOn = !it.map.isSatelliteOn)) }
     }
 
+    /**
+     * CH-111: toggle cepat — langsung mode kebalikan dari tema yang sedang terlihat,
+     * dipakai menu overflow di mana pun berada.
+     */
     fun toggleTheme() {
-        viewModelScope.launch { settings.setDarkTheme(!_uiState.value.settings.isDarkTheme) }
+        val next = if (_uiState.value.settings.isDarkTheme) ThemeMode.LIGHT else ThemeMode.DARK
+        viewModelScope.launch { settings.setThemeMode(next) }
+    }
+
+    /** CH-111: pilihan eksplisit dari layar Pengaturan, termasuk ikuti sistem. */
+    fun setThemeMode(mode: ThemeMode) {
+        viewModelScope.launch { settings.setThemeMode(mode) }
     }
 
     fun setDistanceUnit(unit: DistanceUnit) {

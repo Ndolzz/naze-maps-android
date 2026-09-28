@@ -21,7 +21,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -34,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.naze.maps.data.ThemeMode
 import com.naze.maps.utils.DistanceUnit
 
 /**
@@ -41,6 +41,8 @@ import com.naze.maps.utils.DistanceUnit
  * (Tampilan, Peta, Tentang), ikon per baris, dan tanpa karakter hubung pada seluruh
  * teks UI. Isi tetap berbasis fitur yang benar benar tersedia (tema, satuan jarak,
  * info versi dari manifest) — tidak ada fitur fiktif.
+ * CH-111: baris Tema gelap dengan sakelar diganti tiga pilihan mode tema
+ * (Terang, Gelap, Ikuti sistem).
  */
 @Composable
 fun SettingsScreen(modifier: Modifier = Modifier) {
@@ -68,17 +70,36 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
 
         SectionHeader(text = "Tampilan")
         SettingsCard {
-            SettingsRow(
-                icon = Icons.Filled.DarkMode,
-                title = "Tema gelap",
-                subtitle = "Gunakan tampilan gelap yang nyaman di mata",
-                trailing = {
-                    Switch(
-                        checked = state.settings.isDarkTheme,
-                        onCheckedChange = { viewModel.toggleTheme() },
+            Column {
+                SettingsRow(
+                    icon = Icons.Filled.DarkMode,
+                    title = "Tema aplikasi",
+                    subtitle = "Terang, gelap, atau ikuti pengaturan sistem",
+                    trailing = {},
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    ThemeOption(
+                        label = "Terang",
+                        selected = state.settings.themeMode == ThemeMode.LIGHT,
+                        onClick = { viewModel.setThemeMode(ThemeMode.LIGHT) },
                     )
-                },
-            )
+                    ThemeOption(
+                        label = "Gelap",
+                        selected = state.settings.themeMode == ThemeMode.DARK,
+                        onClick = { viewModel.setThemeMode(ThemeMode.DARK) },
+                    )
+                    ThemeOption(
+                        label = "Ikuti sistem",
+                        selected = state.settings.themeMode == ThemeMode.SYSTEM,
+                        onClick = { viewModel.setThemeMode(ThemeMode.SYSTEM) },
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.height(24.dp))
@@ -192,6 +213,24 @@ private fun SettingsRow(
             }
         }
         trailing()
+    }
+}
+
+// CH-111: pil pilihan mode tema — pola sama seperti UnitOption satuan jarak.
+@Composable
+private fun ThemeOption(label: String, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
+        )
     }
 }
 
