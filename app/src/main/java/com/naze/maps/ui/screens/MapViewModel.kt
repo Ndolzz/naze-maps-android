@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.naze.maps.data.SettingsDataStore
 import com.naze.maps.data.SettingsDataStoreImpl
+import com.naze.maps.favorites.FavoriteEntity
 import com.naze.maps.favorites.FavoritesRepository
 import com.naze.maps.favorites.FavoritesRepositoryImpl
 import com.naze.maps.history.HistoryEntity
@@ -214,11 +215,31 @@ class MapViewModel @JvmOverloads constructor(
     fun selectHistoryEntry(entry: HistoryEntity) {
         val place = NominatimResult(
             placeId = entry.id,
-            displayName = if (entry.address.isNotBlank()) "${entry.name}, ${entry.address}" else entry.name,
+            displayName = if (entry.address.isNotBlank()) entry.name + ", " + entry.address else entry.name,
             lat = entry.latitude.toString(),
             lon = entry.longitude.toString(),
         )
         _uiState.update { it.copy(route = it.route.copy(selectedPlace = place), search = it.search.copy(results = emptyList())) }
+    }
+
+    /**
+     * CH-106: selects a favorite as the current place, without hitting Nominatim.
+     * Same pattern as selectHistoryEntry.
+     */
+    fun selectFavoriteAsPlace(favorite: FavoriteEntity) {
+        val place = NominatimResult(
+            placeId = favorite.id,
+            displayName = if (favorite.address.isNotBlank()) favorite.name + ", " + favorite.address else favorite.name,
+            lat = favorite.latitude.toString(),
+            lon = favorite.longitude.toString(),
+        )
+        _uiState.update { it.copy(route = it.route.copy(selectedPlace = place), search = it.search.copy(results = emptyList(), query = "")) }
+    }
+
+    /** CH-106: one tap from the favorites list — select the place, then request a driving route. */
+    fun routeFromFavorite(favorite: FavoriteEntity) {
+        selectFavoriteAsPlace(favorite)
+        requestRoute(GeoPoint(favorite.latitude, favorite.longitude), RoutingProfile.DRIVING)
     }
 
     fun deleteHistoryEntry(entry: HistoryEntity) {
@@ -264,11 +285,11 @@ class MapViewModel @JvmOverloads constructor(
         viewModelScope.launch { favoritesRepo.save(name, address, lat, lng) }
     }
 
-    fun deleteFavoriteFromScreen(favorite: com.naze.maps.favorites.FavoriteEntity) {
+    fun deleteFavoriteFromScreen(favorite: FavoriteEntity) {
         viewModelScope.launch { favoritesRepo.delete(favorite) }
     }
 
-    fun renameFavorite(favorite: com.naze.maps.favorites.FavoriteEntity, newName: String) {
+    fun renameFavorite(favorite: FavoriteEntity, newName: String) {
         viewModelScope.launch { favoritesRepo.rename(favorite, newName) }
     }
 

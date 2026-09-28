@@ -28,6 +28,9 @@ import com.naze.maps.ui.screens.SettingsScreen
  * through the compact overflow menu [⋮], overlaid top-end on every screen and inset-aware
  * (statusBarsPadding — no hardcoded paddings). The map tab renders edge-to-edge because
  * MapScreen manages its own overlay insets; other screens keep using the Scaffold padding.
+ *
+ * CH-106: FavoritesScreen receives an onNavigateToMap callback so the one-tap route button
+ * can land the user on the map tab, where the route line and any banner are visible.
  */
 @Composable
 fun NazeNavHost(modifier: Modifier = Modifier) {
@@ -37,7 +40,10 @@ fun NazeNavHost(modifier: Modifier = Modifier) {
         Box(modifier = Modifier.fillMaxSize()) {
             when (selectedTab) {
                 NazeTab.MAP -> MapScreen(modifier = Modifier.fillMaxSize())
-                NazeTab.FAVORITES -> FavoritesScreen(modifier = Modifier.fillMaxSize().padding(padding))
+                NazeTab.FAVORITES -> FavoritesScreen(
+                    onNavigateToMap = { selectedTab = NazeTab.MAP },
+                    modifier = Modifier.fillMaxSize().padding(padding),
+                )
                 NazeTab.DISTANCE -> DistanceScreen(modifier = Modifier.padding(padding))
                 NazeTab.SETTINGS -> SettingsScreen(modifier = Modifier.padding(padding))
             }

@@ -223,8 +223,24 @@ fun MapScreen(modifier: Modifier = Modifier) {
                                             }
                                         }
                                     }
-                                    IconButton(onClick = { viewModel.deleteHistoryEntry(entry) }) {
-                                        Icon(Icons.Filled.Close, contentDescription = "Hapus dari riwayat")
+                                    // CH-106: satu ketuk rute mobil + hapus per baris riwayat.
+                                    Row {
+                                        IconButton(onClick = {
+                                            viewModel.selectHistoryEntry(entry)
+                                            viewModel.requestRoute(
+                                                GeoPoint(entry.latitude, entry.longitude),
+                                                RoutingProfile.DRIVING,
+                                            )
+                                        }) {
+                                            Icon(
+                                                Icons.Filled.DirectionsCar,
+                                                contentDescription = "Rute ke sini",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                            )
+                                        }
+                                        IconButton(onClick = { viewModel.deleteHistoryEntry(entry) }) {
+                                            Icon(Icons.Filled.Close, contentDescription = "Hapus dari riwayat")
+                                        }
                                     }
                                 }
                             }
