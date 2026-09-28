@@ -13,6 +13,17 @@ interface NominatimApi {
         @Query("accept-language") acceptLanguage: String = "id",
     ): List<NominatimResult>
 
+    // CH-113: reverse geocoding untuk titik yang ditekan lama di peta.
+    @GET("reverse")
+    suspend fun reverse(
+        @Query("lat") lat: Double,
+        @Query("lon") lon: Double,
+        @Query("format") format: String = "json",
+        @Query("zoom") zoom: Int = 16,
+        @Query("addressdetails") addressDetails: Int = 1,
+        @Query("accept-language") acceptLanguage: String = "id",
+    ): NominatimResult
+
     companion object {
         const val BASE_URL = "https://nominatim.openstreetmap.org/"
     }

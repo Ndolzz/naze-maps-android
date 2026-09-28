@@ -439,9 +439,20 @@ fun MapScreen(modifier: Modifier = Modifier) {
 
         // CH-105: sheet simpan favorit untuk titik yang ditekan lama di peta.
         longPressPoint?.let { point ->
+            // CH-113: minta alamat titik ini begitu sheet tekan lama terbuka.
+            LaunchedEffect(point) {
+                viewModel.resolveLongPressAddress(point.latitude, point.longitude)
+            }
             ModalBottomSheet(onDismissRequest = { longPressPoint = null }) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text("Simpan lokasi ini", style = MaterialTheme.typography.titleMedium)
+                    // CH-113: nama tempat hasil reverse geocoding di atas koordinat.
+                    Text(
+                        if (state.isResolvingLongPress) "Menunggu alamat"
+                        else state.longPressAddress ?: "Alamat tidak ditemukan",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
                     Text(
                         String.format(Locale.US, "%.5f, %.5f", point.latitude, point.longitude),
                         style = MaterialTheme.typography.bodyMedium,

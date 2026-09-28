@@ -87,6 +87,9 @@ data class MapUiState(
     val route: RouteState = RouteState(),
     val map: MapViewState = MapViewState(),
     val settings: SettingsState = SettingsState(),
+    // CH-113: hasil reverse geocoding untuk titik yang ditekan lama di peta.
+    val longPressAddress: String? = null,
+    val isResolvingLongPress: Boolean = false,
     val banner: MapBanner? = null,
 )
 
@@ -345,6 +348,15 @@ class MapViewModel @JvmOverloads constructor(
     /** CH-111: pilihan eksplisit dari layar Pengaturan, termasuk ikuti sistem. */
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch { settings.setThemeMode(mode) }
+    }
+
+    /** CH-113: alamat untuk titik yang ditekan lama; null bila gagal atau luring. */
+    fun resolveLongPressAddress(lat: Double, lon: Double) {
+        _uiState.update { it.copy(longPressAddress = null, isResolvingLongPress = true) }
+        viewModelScope.launch {
+            val place = searchRepo.reverseGeocode(lat, lon)
+            _uiState.update { it.copy(longPressAddress = place?.displayName, isResolvingLongPress = false) }
+        }
     }
 
     fun setDistanceUnit(unit: DistanceUnit) {

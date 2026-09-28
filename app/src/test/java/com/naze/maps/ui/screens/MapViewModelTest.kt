@@ -71,12 +71,16 @@ class MapViewModelTest {
     private class FakeSearchRepository : SearchRepository {
         val queries = mutableListOf<String>()
         var outcome: SearchOutcome = SearchOutcome.Empty
+        var reverseResult: NominatimResult? = null
         override suspend fun search(query: String): SearchOutcome {
             queries.add(query)
             return outcome
         }
         override suspend fun geocodeOne(query: String): NominatimResult? =
             (search(query) as? SearchOutcome.Success)?.results?.firstOrNull()
+
+        // CH-113: hasil reverse geocoding titik tekan lama, dikendalikan per test.
+        override suspend fun reverseGeocode(lat: Double, lon: Double): NominatimResult? = reverseResult
     }
 
     private class FakeRoutingRepository : RoutingRepository {
@@ -347,6 +351,25 @@ class MapViewModelTest {
         advance()
         assertEquals(ThemeMode.DARK, settings.mode.value)
         assertTrue(vm.uiState.value.settings.isDarkTheme)
+    }
+
+    // CH-113: reverse geocoding titik tekan lama mengisi slice longPress.
+    @Test
+    fun `resolveLongPressAddress fills the longPress slice and clears it on null`() {
+        searchRepo.reverseResult = place
+        val vm = createVm()
+        advance()
+
+        vm.resolveLongPressAddress(-6.1954, 106.8229)
+        advance()
+        assertEquals("Monas, Jakarta", vm.uiState.value.longPressAddress)
+        assertFalse(vm.uiState.value.isResolvingLongPress)
+
+        searchRepo.reverseResult = null
+        vm.resolveLongPressAddress(-6.2, 106.8)
+        advance()
+        assertNull(vm.uiState.value.longPressAddress)
+        assertFalse(vm.uiState.value.isResolvingLongPress)
     }
 
     @Test
