@@ -2,7 +2,7 @@
 
 - ID: SDD-050
 - Title: Refactoring Migration Plan
-- Status: PROPOSED (status per-task di bawah)
+- Status: DONE (semua task tereksekusi; verifikasi per-task di bawah)
 
 Pola per task: Audit → Baseline → Characterization test → Introduce boundary → Move one responsibility → Test → Build → Regression check → Commit.
 
@@ -20,9 +20,9 @@ Pola per task: Audit → Baseline → Characterization test → Introduce bounda
 - TASK-010 Split MapUiState per feature screen state (ADR-003) + VM unit tests dengan fakes — DONE & VERIFIED (CI hijau):
   - TASK-010a (0194112 + fix e6bbfda): MapUiState dipecah per fitur (LocationState, SearchState, RouteState, MapViewState, SettingsState); semua update site & pemakaian kini lewat slice-nya, termasuk MainActivity (uiState.settings.isDarkTheme — terlewat di commit pertama, menyebabkan build merah, diperbaiki di e6bbfda).
   - TASK-010b: DONE (2c39061 + 68eccdf + fix a77e8ed + fix e06dd47): repo dijadikan interface dengan impl *Impl (2c39061); 12 VM unit test dengan fakes via Robolectric (68eccdf). Fix lanjutan: import setMain/resetMain (f1bb961), characterization tests konstruksi *Impl (a77e8ed), dan @Config(application = Application::class) agar NazeMapsApp.onCreate (MapLibre native) tidak dijalankan di JVM Robolectric (e06dd47 — sebelumnya 11 test UnsatisfiedLinkError). CI hijau. Path yang butuh GPS permission/service (tracking + rute dengan lokasi) tetap di regression manual device.
-- TASK-011 Nominatim request hardening — DONE (dd159ce): accept-language dikirim dari Locale perangkat (default "id" di NominatimApi) dan debounce pencarian dinaikkan 350ms → 500ms sesuai policy Nominatim. CI pending.
-- TASK-012 Remove unused navigation-compose (BUG-011) + pindah logging-interceptor ke debugImplementation (TD-SEC-1) — DONE (664c593): dependency-only change; diverifikasi NazeNavHost adalah state-based tab switcher (tidak ada import androidx.navigation) dan NetworkModule tidak memakai HttpLoggingInterceptor. CI pending.
-- TASK-013 Mitigasi CI flaky release (BUG-015): retry/cache lint deps.
+- TASK-011 Nominatim request hardening — DONE & VERIFIED (CI hijau) (dd159ce): accept-language dikirim dari Locale perangkat (default "id" di NominatimApi) dan debounce pencarian dinaikkan 350ms → 500ms sesuai policy Nominatim.
+- TASK-012 Remove unused navigation-compose (BUG-011) + pindah logging-interceptor ke debugImplementation (TD-SEC-1) — DONE & VERIFIED (CI hijau) (664c593): dependency-only change; diverifikasi NazeNavHost adalah state-based tab switcher (tidak ada import androidx.navigation) dan NetworkModule tidak memakai HttpLoggingInterceptor.
+- TASK-013 Mitigasi CI flaky release (BUG-015) — DONE (2c37af3): step assembleRelease kini retry hingga 3x (BUG-015 root cause: lintVitalAnalyzeRelease "Read timed out" mengunduh intellij-core dari dl.google.com — transient) dan gradle-home-cache-includes eksplisit agar deps lint ter-cache antar-run. CI pending.
 
 ## Aturan eksekusi
 
