@@ -57,6 +57,7 @@ import com.naze.maps.map.MapStyle
 import com.naze.maps.map.setSatelliteVisible
 import com.naze.maps.map.updateLocationDot
 import com.naze.maps.map.updateRouteLine
+import com.naze.maps.map.updateSelectedPlaceMarker
 import com.naze.maps.routing.RoutingProfile
 import com.naze.maps.ui.components.CompassFab
 import com.naze.maps.ui.components.ErrorBanner
@@ -132,6 +133,15 @@ fun MapScreen(modifier: Modifier = Modifier) {
     // since MapLibre drops custom sources/layers whenever setStyle() runs.
     LaunchedEffect(state.route.activeRoute, mapStyle) {
         mapStyle?.updateRouteLine(state.route.activeRoute)
+    }
+
+    // CH-108 (follow up BUG-004): gambar penanda pada tempat terpilih agar tetap terlihat
+    // saat kamera digeser. Re-fire saat style reload (toggle tema).
+    LaunchedEffect(state.route.selectedPlace, mapStyle) {
+        mapStyle?.updateSelectedPlaceMarker(
+            state.route.selectedPlace?.latitude,
+            state.route.selectedPlace?.longitude,
+        )
     }
 
     // Applies the satellite toggle to whichever Style instance is currently loaded — also
