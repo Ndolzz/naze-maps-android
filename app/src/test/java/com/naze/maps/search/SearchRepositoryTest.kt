@@ -16,6 +16,7 @@ import org.junit.Test
  * Characterization tests (SDD TASK-003) — SearchRepository outcome mapping
  * via MockWebServer. Behavior yang dibekukan sesuai baseline (commit sebelum refactor):
  * blank -> Empty (tanpa request), IOException -> NoInternet, lainnya -> Error.
+ * TASK-010b: repo kini interface; test menguji SearchRepositoryImpl langsung.
  */
 class SearchRepositoryTest {
 
@@ -27,7 +28,7 @@ class SearchRepositoryTest {
     fun setUp() {
         server = MockWebServer()
         server.start()
-        repo = SearchRepository(
+        repo = SearchRepositoryImpl(
             api = NetworkModule.create(server.url("/").toString(), NominatimApi::class.java),
         )
     }
@@ -80,7 +81,7 @@ class SearchRepositoryTest {
         val deadUrl = server.url("/").toString()
         server.shutdown()
         running = false
-        val deadRepo = SearchRepository(api = NetworkModule.create(deadUrl, NominatimApi::class.java))
+        val deadRepo = SearchRepositoryImpl(api = NetworkModule.create(deadUrl, NominatimApi::class.java))
         assertEquals(SearchOutcome.NoInternet, deadRepo.search("monas"))
     }
 

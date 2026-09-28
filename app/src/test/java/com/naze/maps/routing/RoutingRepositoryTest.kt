@@ -15,6 +15,7 @@ import org.junit.Test
  * Characterization tests (SDD TASK-003) — RoutingRepository outcome mapping
  * via MockWebServer: code != "Ok" ATAU routes kosong -> NoRouteFound;
  * IOException -> NoInternet; lainnya -> Error.
+ * TASK-010b: repo kini interface; test menguji RoutingRepositoryImpl langsung.
  */
 class RoutingRepositoryTest {
 
@@ -29,7 +30,7 @@ class RoutingRepositoryTest {
     fun setUp() {
         server = MockWebServer()
         server.start()
-        repo = RoutingRepository(
+        repo = RoutingRepositoryImpl(
             api = NetworkModule.create(server.url("/").toString(), OsrmApi::class.java),
         )
     }
@@ -82,7 +83,7 @@ class RoutingRepositoryTest {
         val deadUrl = server.url("/").toString()
         server.shutdown()
         running = false
-        val deadRepo = RoutingRepository(api = NetworkModule.create(deadUrl, OsrmApi::class.java))
+        val deadRepo = RoutingRepositoryImpl(api = NetworkModule.create(deadUrl, OsrmApi::class.java))
         assertEquals(RouteOutcome.NoInternet, deadRepo.getRoute(from, to, RoutingProfile.DRIVING))
     }
 }
