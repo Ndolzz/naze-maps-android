@@ -458,7 +458,7 @@ fun MapScreen(modifier: Modifier = Modifier) {
 " +
                                     "Jarak " + distanceText + "
 " +
-                                    "Perkiraan waktu " + minutes + " menit
+                                    "Perkiraan waktu " + minutes + " menit" + "
 " + link
                                 val sendIntent = Intent(Intent.ACTION_SEND).apply {
                                     type = "text/plain"
