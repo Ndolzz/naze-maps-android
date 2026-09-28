@@ -40,8 +40,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.run
-time.remember
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,8 +85,7 @@ fun MapScreen(modifier: Modifier = Modifier) {
     var maplibreMap by remember { mutableStateOf<MapLibreMap?>(null) }
     var mapStyle by remember { mutableStateOf<Style?>(null) }
 
-    // CH-102 (BUG-018): splash presentasi one-
-shot — sekali dismiss, tidak muncul lagi
+    // CH-102 (BUG-018): splash presentasi one-shot — sekali dismiss, tidak muncul lagi
     // (tab switch / theme switch tidak memutar ulang splash).
     var splashDismissed by remember { mutableStateOf(false) }
 
@@ -127,8 +125,7 @@ shot — sekali dismiss, tidak muncul lagi
     // Draw (or clear) the "my location" dot independently of camera tracking — it should show
     // wherever we last heard from GPS, whether or not the camera is actively following it.
     LaunchedEffect(state.location.myLocation, mapStyle) {
-        mapStyle?.updateLocationDot(state.location.myLocation?.latitude, state.location.myLocation?.lon
-gitude)
+        mapStyle?.updateLocationDot(state.location.myLocation?.latitude, state.location.myLocation?.longitude)
     }
 
     // Draw (or clear) the active route's line. Re-fires on style reload (e.g. theme switch)
@@ -174,8 +171,7 @@ gitude)
                     shape = MaterialTheme.shapes.large,
                     tonalElevation = 4.dp,
                 ) {
-                    LazyColumn(modifier = Modifier.padding(vertical 
-= 4.dp)) {
+                    LazyColumn(modifier = Modifier.padding(vertical = 4.dp)) {
                         items(state.search.results) { result ->
                             Column(
                                 modifier = Modifier
@@ -210,8 +206,7 @@ gitude)
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-     
-                                   .clickable { viewModel.selectHistoryEntry(entry) }
+                                        .clickable { viewModel.selectHistoryEntry(entry) }
                                         .padding(horizontal = 16.dp, vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -240,8 +235,7 @@ gitude)
                                         }) {
                                             Icon(
                                                 Icons.Filled.DirectionsCar,
-                    
-                            contentDescription = "Rute ke sini",
+                                                contentDescription = "Rute ke sini",
                                                 tint = MaterialTheme.colorScheme.primary,
                                             )
                                         }
@@ -284,8 +278,7 @@ gitude)
                         onClick = viewModel::toggleSatellite,
                     )
                     MyLocationFab(
-                        isActive = state.location.isTrac
-kingMe,
+                        isActive = state.location.isTrackingMe,
                         onClick = {
                             if (permissionState.allPermissionsGranted) {
                                 if (state.location.isTrackingMe) viewModel.stopTracking() else viewModel.startTracking()
@@ -329,8 +322,7 @@ kingMe,
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text("Simpan lokasi ini", style = MaterialTheme.typography.titleMedium)
                     Text(
-                
-        String.format(Locale.US, "%.5f, %.5f", point.latitude, point.longitude),
+                        String.format(Locale.US, "%.5f, %.5f", point.latitude, point.longitude),
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(top = 4.dp),
                     )
@@ -370,8 +362,7 @@ kingMe,
         state.route.selectedPlace?.let { place ->
             ModalBottomSheet(onDismissRequest = viewModel::clearSelection) {
                 Column(modifier = Modifier.padding(20.dp)) {
-                    Text(place.mainText, style =
- MaterialTheme.typography.titleMedium)
+                    Text(place.mainText, style = MaterialTheme.typography.titleMedium)
                     Text(place.subText, style = MaterialTheme.typography.bodyMedium)
 
                     Text(
@@ -413,8 +404,7 @@ kingMe,
                             )
                         }) {
                             Icon(
-   
-                             Icons.Filled.DirectionsBike,
+                                Icons.Filled.DirectionsBike,
                                 contentDescription = "Sepeda",
                                 modifier = Modifier.padding(end = 6.dp),
                             )
@@ -448,8 +438,7 @@ kingMe,
                     // CH-107: bagikan ringkasan rute aktif (jarak + waktu OSRM + tautan).
                     state.route.activeRoute?.let { route ->
                         OutlinedButton(
-                            onCli
-ck = {
+                            onClick = {
                                 val routeKm = route.distanceMeters / 1000.0
                                 val minutes = (route.durationSeconds / 60.0).toInt()
                                 val distanceText = DistanceUtils.format(routeKm, state.settings.distanceUnit)
@@ -477,8 +466,7 @@ ck = {
                         ) {
                             Icon(
                                 Icons.Filled.Share,
-                                contentDescription = "Bagikan ru
-te",
+                                contentDescription = "Bagikan rute",
                                 modifier = Modifier.padding(end = 6.dp),
                             )
                             Text("Bagikan rute")
