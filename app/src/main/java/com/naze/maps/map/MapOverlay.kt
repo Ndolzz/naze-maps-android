@@ -24,6 +24,13 @@ private const val LOCATION_LAYER_ID = "naze-location-layer"
 private const val SATELLITE_SOURCE_ID = "naze-satellite-source"
 private const val SATELLITE_LAYER_ID = "naze-satellite-layer"
 
+// CH-100 (BUG-016): Esri World Imagery hanya menyediakan tile hingga level ~19 (LOD maksimum
+// layanan; sebagian area lebih rendah). Tanpa maxZoom, MapLibre meminta tile z>=20 yang 404
+// dan menampilkan placeholder "Map data not yet available". Dengan maxZoom ter-set, MapLibre
+// melakukan raster overzoom: tile z19 induk diskalakan — imagery tetap tampil, tidak ada
+// penurunan informasi (provider memang tidak pernah punya detail z>19).
+private const val SATELLITE_MAX_ZOOM = 19
+
 /**
  * Draws the active route as a line on the map (or clears it when [route] is null).
  * Safe to call on every recomposition — updates the existing source instead of re-adding layers.
@@ -86,7 +93,7 @@ fun Style.setSatelliteVisible(visible: Boolean) {
             val tileSet = TileSet(
                 "2.1.0",
                 "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-            )
+            ).withMaxZoom(SATELLITE_MAX_ZOOM)
             addSource(RasterSource(SATELLITE_SOURCE_ID, tileSet, 256))
             addLayerAt(RasterLayer(SATELLITE_LAYER_ID, SATELLITE_SOURCE_ID), 0)
         }
