@@ -150,6 +150,18 @@ private fun RouteSummaryCard(
     }
 }
 
+// CH-110: entri riwayat yang cocok dengan teks kueri (nama atau alamat, case insensitive).
+private fun historySuggestions(
+    history: List<HistoryEntity>,
+    query: String,
+): List<HistoryEntity> {
+    if (query.isBlank()) return history
+    return history.filter { entry ->
+        entry.name.contains(query, ignoreCase = true) ||
+            entry.address.contains(query, ignoreCase = true)
+    }
+}
+
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(modifier: Modifier = Modifier) {
@@ -250,6 +262,9 @@ fun MapScreen(modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxWidth().padding(end = 56.dp),
             )
 
+            // CH-110: saran dari riwayat — tampil saat kotak pencarian kosong maupun saat
+            // pengguna sedang mengetik, selama belum ada hasil Nominatim.
+            val suggestions = historySuggestions(history, state.search.query)
             if (state.search.results.isNotEmpty()) {
                 Surface(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -270,8 +285,9 @@ fun MapScreen(modifier: Modifier = Modifier) {
                         }
                     }
                 }
-            } else if (state.search.query.isBlank() && history.isNotEmpty()) {
-                // Riwayat lokasi — muncul saat kotak pencarian kosong, hilang begitu ada hasil pencarian.
+            } else if (suggestions.isNotEmpty()) {
+                // Riwayat / saran — entri yang pernah dicari diusulkan lebih dulu,
+                // hasil Nominatim menyusul setelah debounce.
                 Surface(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     shape = MaterialTheme.shapes.large,
@@ -283,11 +299,14 @@ fun MapScreen(modifier: Modifier = Modifier) {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("Riwayat lokasi", style = MaterialTheme.typography.labelLarge)
+                            Text(
+                                if (state.search.query.isBlank()) "Riwayat lokasi" else "Saran dari riwayat",
+                                style = MaterialTheme.typography.labelLarge,
+                            )
                             TextButton(onClick = viewModel::clearHistory) { Text("Hapus semua") }
                         }
                         LazyColumn(modifier = Modifier.heightIn(max = 260.dp)) {
-                            items(history, key = { it.id }) { entry: HistoryEntity ->
+                            items(suggestions, key = { it.id }) { entry: HistoryEntity ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
