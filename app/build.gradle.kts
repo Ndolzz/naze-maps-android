@@ -68,7 +68,8 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.navigation:navigation-compose:2.7.7")
+    // TASK-012 (BUG-011): navigation-compose dihapus — NazeNavHost adalah state-based
+    // tab switcher (when over NazeTab), tidak ada import androidx.navigation di kode.
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     // Coroutines Play Services integration (for .await() extension)
@@ -87,7 +88,10 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    // TASK-012 (TD-SEC-1): logging-interceptor hanya untuk build debug — tidak ada
+    // referensi HttpLoggingInterceptor di kode (NetworkModule hanya memasang
+    // User-Agent interceptor), jadi build release tidak terpengaruh.
+    debugImplementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     // Local persistence
     implementation("androidx.room:room-runtime:2.6.1")
