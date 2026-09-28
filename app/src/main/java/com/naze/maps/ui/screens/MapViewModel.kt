@@ -72,6 +72,8 @@ data class RouteState(
 
 data class MapViewState(
     val isSatelliteOn: Boolean = false,
+    // CH-114: mode ikuti kamera — bearing peta mengikuti arah hadap pengguna.
+    val isFollowCameraOn: Boolean = false,
 )
 
 data class SettingsState(
@@ -334,6 +336,11 @@ class MapViewModel @JvmOverloads constructor(
 
     fun toggleSatellite() {
         _uiState.update { it.copy(map = it.map.copy(isSatelliteOn = !it.map.isSatelliteOn)) }
+    }
+
+    /** CH-114: balik mode ikuti kamera; dipakai tombol peta dan tombol kompas. */
+    fun toggleFollowCamera() {
+        _uiState.update { it.copy(map = it.map.copy(isFollowCameraOn = !it.map.isFollowCameraOn)) }
     }
 
     /**

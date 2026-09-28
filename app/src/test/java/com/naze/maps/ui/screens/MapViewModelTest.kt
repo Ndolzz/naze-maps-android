@@ -372,6 +372,18 @@ class MapViewModelTest {
         assertFalse(vm.uiState.value.isResolvingLongPress)
     }
 
+    // CH-114: mode ikuti kamera membalik penanda di slice map.
+    @Test
+    fun `toggleFollowCamera flips the map slice`() {
+        val vm = createVm()
+        advance()
+        assertFalse(vm.uiState.value.map.isFollowCameraOn)
+        vm.toggleFollowCamera()
+        assertTrue(vm.uiState.value.map.isFollowCameraOn)
+        vm.toggleFollowCamera()
+        assertFalse(vm.uiState.value.map.isFollowCameraOn)
+    }
+
     @Test
     fun `setDistanceUnit persists and updates the settings slice`() {
         val vm = createVm()

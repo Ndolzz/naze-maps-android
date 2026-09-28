@@ -62,6 +62,7 @@ import com.naze.maps.map.updateSelectedPlaceMarker
 import com.naze.maps.routing.OsrmRoute
 import com.naze.maps.routing.RoutingProfile
 import com.naze.maps.ui.components.CompassFab
+import com.naze.maps.ui.components.FollowCameraFab
 import com.naze.maps.ui.components.ErrorBanner
 import com.naze.maps.ui.components.LayersFab
 import com.naze.maps.ui.components.MapLoadingOverlay
@@ -179,6 +180,24 @@ fun MapScreen(modifier: Modifier = Modifier) {
 
     // CH-105: titik yang sedang ditekan lama di peta (kandidat favorit), atau null.
     var longPressPoint by remember { mutableStateOf<LatLng?>(null) }
+
+    // CH-114: saat mode ikuti kamera aktif, bearing peta mengikuti arah kompas.
+    LaunchedEffect(state.location.headingDegrees, state.map.isFollowCameraOn) {
+        val heading = state.location.headingDegrees ?: return@LaunchedEffect
+        if (!state.map.isFollowCameraOn) return@LaunchedEffect
+        maplibreMap?.let { map ->
+            val pos = map.cameraPosition
+            map.moveCamera(
+                CameraUpdateFactory.newCameraPosition(
+                    CameraPosition.Builder()
+                        .target(pos.target)
+                        .bearing(heading.toDouble())
+                        .zoom(pos.zoom)
+                        .build()
+                )
+            )
+        }
+    }
 
     val permissionState = rememberMultiplePermissionsState(PermissionUtils.requiredPermissions.toList()) { results ->
         viewModel.onPermissionResult(results.values.any { it })
@@ -365,9 +384,18 @@ fun MapScreen(modifier: Modifier = Modifier) {
                     modifier = Modifier.align(Alignment.BottomEnd),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
+                    // CH-114: tombol mode ikuti kamera, hanya saat sensor arah tersedia.
+                    if (state.location.headingDegrees != null) {
+                        FollowCameraFab(
+                            isActive = state.map.isFollowCameraOn,
+                            onClick = viewModel::toggleFollowCamera,
+                        )
+                    }
                     CompassFab(
                         headingDegrees = state.location.headingDegrees,
                         onResetNorth = {
+                            // CH-114: reset utara juga mematikan mode ikuti kamera.
+                            if (state.map.isFollowCameraOn) viewModel.toggleFollowCamera()
                             maplibreMap?.let { map ->
                                 map.cameraPosition = CameraPosition.Builder()
                                     .target(map.cameraPosition.target)
@@ -508,8 +536,7 @@ fun MapScreen(modifier: Modifier = Modifier) {
                                 GeoPoint(place.latitude, place.longitude),
                                 RoutingProfile.DRIVING,
                             )
-                        }) {
-                            Icon(
+                        }) {                            Icon(
                                 Icons.Filled.DirectionsCar,
                                 contentDescription = "Mobil",
                                 modifier = Modifier.padding(end = 6.dp),
@@ -549,7 +576,8 @@ fun MapScreen(modifier: Modifier = Modifier) {
 
                     Row(
                         modifier = Modifier.padding(top = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        horizont
+alArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         OutlinedButton(onClick = {
                             viewModel.saveFavorite(place.mainText, place.subText, place.latitude, place.longitude)
