@@ -48,9 +48,7 @@ Format per bug; severity berdasar dampak & evidence kode, bukan perkiraan.
 
 ## BUG-011 — Dependency navigation-compose tidak dipakai
 - Severity: LOW
-- Status: FIXED (TASK-012, 664c593). CI pending s
-
-ebelum CLOSED final.
+- Status: FIXED (TASK-012, 664c593). CI pending sebelum CLOSED final.
 
 ## BUG-012 — Tracking location tetap jalan saat user pindah tab
 - Severity: MEDIUM
@@ -80,7 +78,8 @@ ebelum CLOSED final.
 
 ## BUG-018 — Splash generik: launcher icon tanpa motion, tanpa identitas brand
 - Severity: LOW (UX)
-- Status: FIXED (CH-102): SplashOverlay "Map Comes Alive", readiness-driven. CI + regression manual pending sebelum CLOSED final.
+- Status: FIXED (CH-102): SplashOverlay "Map Comes Alive", readiness-driven. CI + regression manual pend
+ing sebelum CLOSED final.
 
 ## BUG-019 — Kompas menumpuk/berasa tidak rapi di area kanan map
 - Severity: LOW (UX)
@@ -110,4 +109,4 @@ HistoryEntry tidak record ulang riwayat — konsisten baseline.
 - Severity: HIGH (compileDebugUnitTestKotlin gagal; CI merah untuk commit CH-111 ke atas).
 - Root cause (CONFIRMED, inspeksi MapViewModelTest.kt): CH-111 menambah themeMode dan setThemeMode ke interface SettingsDataStore, tetapi FakeSettingsDataStore di unit test tidak diperbarui, sehingga fake tidak lagi mengimplementasikan interface (error: does not implement abstract member). Selain itu toggleTheme kini menulis mode, bukan sakelar dark_theme lama, sehingga assertion lama pada settings.darkTheme tidak lagi relevan.
 - Perbaikan: fake menambah MutableStateFlow themeMode (default DARK agar isDarkTheme awal tetap benar) dan setThemeMode; test toggleTheme diperbarui mengamati themeMode; ditambah test setThemeMode memastikan pilihan persist dan isDarkTheme mengikuti resolve LIGHT/DARK.
-- Status: FIXED pada commit perbaikan terisolasi. CI + regression pending sebelum CLOSED final.
+- Status: CLOSED — fix pada commit c011e2f, CI hijau dikonfirmasi pengguna (CH-113 juga hijau pada bced5d5).
