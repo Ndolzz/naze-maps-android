@@ -64,6 +64,8 @@ data class SearchState(
 data class RouteState(
     val selectedPlace: NominatimResult? = null,
     val activeRoute: OsrmRoute? = null,
+    // CH-109: profil yang dipakai untuk rute aktif, agar kartu ringkasan tampilkan mode.
+    val activeProfile: RoutingProfile? = null,
 )
 
 data class MapViewState(
@@ -251,7 +253,12 @@ class MapViewModel @JvmOverloads constructor(
     }
 
     fun clearSelection() {
-        _uiState.update { it.copy(route = it.route.copy(selectedPlace = null, activeRoute = null)) }
+        _uiState.update { it.copy(route = it.route.copy(selectedPlace = null, activeRoute = null, activeProfile = null)) }
+    }
+
+    /** CH-109: menutup hanya garis rute dan kartu ringkasan, tanpa melepas pilihan tempat. */
+    fun clearRoute() {
+        _uiState.update { it.copy(route = it.route.copy(activeRoute = null, activeProfile = null)) }
     }
 
     fun requestRoute(to: GeoPoint, profile: RoutingProfile) {
@@ -268,7 +275,7 @@ class MapViewModel @JvmOverloads constructor(
                 GeoPoint(from.latitude, from.longitude), to, profile,
             )) {
                 is RouteOutcome.Success -> _uiState.update {
-                    it.copy(route = it.route.copy(activeRoute = outcome.routes.first()), banner = null)
+                    it.copy(route = it.route.copy(activeRoute = outcome.routes.first(), activeProfile = profile), banner = null)
                 }
                 RouteOutcome.NoInternet -> _uiState.update { it.copy(banner = MapBanner.NoInternet) }
                 RouteOutcome.NoRouteFound -> _uiState.update {

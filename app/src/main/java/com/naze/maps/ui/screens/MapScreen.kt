@@ -44,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -58,6 +59,7 @@ import com.naze.maps.map.setSatelliteVisible
 import com.naze.maps.map.updateLocationDot
 import com.naze.maps.map.updateRouteLine
 import com.naze.maps.map.updateSelectedPlaceMarker
+import com.naze.maps.routing.OsrmRoute
 import com.naze.maps.routing.RoutingProfile
 import com.naze.maps.ui.components.CompassFab
 import com.naze.maps.ui.components.ErrorBanner
@@ -67,6 +69,7 @@ import com.naze.maps.ui.components.MyLocationFab
 import com.naze.maps.ui.components.NazeSearchBar
 import com.naze.maps.ui.components.SplashOverlay
 import com.naze.maps.utils.DistanceUtils
+import com.naze.maps.utils.DistanceUnit
 import com.naze.maps.utils.GeoPoint
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -74,6 +77,78 @@ import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
 import java.util.Locale
+
+// CH-109: label mode untuk kartu ringkasan rute.
+private fun profileLabel(profile: RoutingProfile?): String = when (profile) {
+    RoutingProfile.DRIVING -> "Mobil"
+    RoutingProfile.WALKING -> "Jalan kaki"
+    RoutingProfile.CYCLING -> "Sepeda"
+    null -> "Rute"
+}
+
+// CH-109: ikon mode untuk kartu ringkasan rute.
+private fun profileIcon(profile: RoutingProfile?): ImageVector = when (profile) {
+    RoutingProfile.DRIVING -> Icons.Filled.DirectionsCar
+    RoutingProfile.WALKING -> Icons.Filled.DirectionsWalk
+    RoutingProfile.CYCLING -> Icons.Filled.DirectionsBike
+    null -> Icons.Filled.DirectionsCar
+}
+
+// CH-109: durasi OSRM menjadi teks menit, atau jam menit bila lebih dari satu jam.
+private fun formatDurationSeconds(seconds: Double): String {
+    val totalMinutes = (seconds / 60.0).toInt()
+    return if (totalMinutes < 60) {
+        totalMinutes.toString() + " menit"
+    } else {
+        val hours = totalMinutes / 60
+        val minutes = totalMinutes % 60
+        if (minutes == 0) hours.toString() + " jam" else hours.toString() + " jam " + minutes.toString() + " menit"
+    }
+}
+
+/**
+ * CH-109: kartu ringkasan rute aktif — ikon dan label mode, jarak sesuai satuan
+ * pengaturan, plus perkiraan waktu dari durationSeconds OSRM. Tombol tutup hanya
+ * menutup garis rute, pilihan tempat tetap ada.
+ */
+@Composable
+private fun RouteSummaryCard(
+    route: OsrmRoute,
+    profile: RoutingProfile?,
+    unit: DistanceUnit,
+    onClear: () -> Unit,
+) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = 6.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                profileIcon(profile),
+                contentDescription = profileLabel(profile),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Column {
+                Text(profileLabel(profile), style = MaterialTheme.typography.labelMedium)
+                Text(
+                    "Jarak " + DistanceUtils.format(route.distanceMeters / 1000.0, unit),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Text(
+                    "Sekitar " + formatDurationSeconds(route.durationSeconds),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            IconButton(onClick = onClear) {
+                Icon(Icons.Filled.Close, contentDescription = "Tutup ringkasan rute")
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -298,6 +373,23 @@ fun MapScreen(modifier: Modifier = Modifier) {
                         },
                     )
                 }
+            }
+        }
+
+        // CH-109: kartu ringkasan rute aktif — mode, jarak, dan perkiraan waktu.
+        state.route.activeRoute?.let { route ->
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .systemBarsPadding()
+                    .padding(bottom = 16.dp),
+            ) {
+                RouteSummaryCard(
+                    route = route,
+                    profile = state.route.activeProfile,
+                    unit = state.settings.distanceUnit,
+                    onClear = viewModel::clearRoute,
+                )
             }
         }
 
