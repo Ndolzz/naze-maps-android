@@ -17,6 +17,7 @@ import com.naze.maps.ui.components.NavOverflowMenu
 import com.naze.maps.ui.components.NazeTab
 import com.naze.maps.ui.screens.DistanceScreen
 import com.naze.maps.ui.screens.FavoritesScreen
+import com.naze.maps.ui.screens.HelpScreen
 import com.naze.maps.ui.screens.MapScreen
 import com.naze.maps.ui.screens.SettingsScreen
 
@@ -31,10 +32,14 @@ import com.naze.maps.ui.screens.SettingsScreen
  *
  * CH-106: FavoritesScreen receives an onNavigateToMap callback so the one-tap route button
  * can land the user on the map tab, where the route line and any banner are visible.
+ *
+ * CH-112: HelpScreen is a full-screen overlay above the current tab, opened from
+ * SettingsScreen and closed with its back button — no new overflow tab.
  */
 @Composable
 fun NazeNavHost(modifier: Modifier = Modifier) {
     var selectedTab by remember { mutableStateOf(NazeTab.MAP) }
+    var showHelp by remember { mutableStateOf(false) }
 
     Scaffold(modifier = modifier.fillMaxSize()) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
@@ -45,7 +50,10 @@ fun NazeNavHost(modifier: Modifier = Modifier) {
                     modifier = Modifier.fillMaxSize().padding(padding),
                 )
                 NazeTab.DISTANCE -> DistanceScreen(modifier = Modifier.padding(padding))
-                NazeTab.SETTINGS -> SettingsScreen(modifier = Modifier.padding(padding))
+                NazeTab.SETTINGS -> SettingsScreen(
+                    onOpenHelp = { showHelp = true },
+                    modifier = Modifier.padding(padding),
+                )
             }
 
             NavOverflowMenu(
@@ -56,6 +64,15 @@ fun NazeNavHost(modifier: Modifier = Modifier) {
                     .statusBarsPadding()
                     .padding(top = 12.dp, end = 12.dp),
             )
+
+            if (showHelp) {
+                HelpScreen(
+                    onBack = { showHelp = false },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                )
+            }
         }
     }
 }

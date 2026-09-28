@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Straighten
@@ -43,9 +44,13 @@ import com.naze.maps.utils.DistanceUnit
  * info versi dari manifest) — tidak ada fitur fiktif.
  * CH-111: baris Tema gelap dengan sakelar diganti tiga pilihan mode tema
  * (Terang, Gelap, Ikuti sistem).
+ * CH-112: baris Bantuan di bagian Tentang membuka halaman bantuan.
  */
 @Composable
-fun SettingsScreen(modifier: Modifier = Modifier) {
+fun SettingsScreen(
+    modifier: Modifier = Modifier,
+    onOpenHelp: () -> Unit = {},
+) {
     val viewModel: MapViewModel = viewModel()
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -138,19 +143,34 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
 
         SectionHeader(text = "Tentang")
         SettingsCard {
-            SettingsRow(
-                icon = Icons.Filled.Place,
-                title = "NAZE Maps",
-                subtitle = "Menjelajah dunia lewat peta terbuka",
-                trailing = {},
-            )
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            SettingsRow(
-                icon = Icons.Filled.Info,
-                title = "Versi aplikasi",
-                subtitle = versionName,
-                trailing = {},
-            )
+            Column {
+                SettingsRow(
+                    icon = Icons.Filled.Place,
+                    title = "NAZE Maps",
+                    subtitle = "Menjelajah dunia lewat peta terbuka",
+                    trailing = {},
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                // CH-112: buka halaman bantuan.
+                Surface(
+                    onClick = onOpenHelp,
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                ) {
+                    SettingsRow(
+                        icon = Icons.Filled.HelpOutline,
+                        title = "Bantuan",
+                        subtitle = "Cara pakai pencarian, rute, favorit, dan pengaturan",
+                        trailing = {},
+                    )
+                }
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                SettingsRow(
+                    icon = Icons.Filled.Info,
+                    title = "Versi aplikasi",
+                    subtitle = versionName,
+                    trailing = {},
+                )
+            }
         }
 
         Spacer(Modifier.height(24.dp))
