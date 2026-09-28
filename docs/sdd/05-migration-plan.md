@@ -19,7 +19,7 @@ Pola per task: Audit → Baseline → Characterization test → Introduce bounda
 - TASK-009 Constructor injection MapViewModel — DONE (commit 5a5d3c4): semua collaborator kini parameter constructor dengan default dari Application; @JvmOverloads mempertahankan compatibility dengan AndroidViewModelFactory; production wiring & behavior tidak berubah. CI pending. Follow-up natural: VM unit test dengan fake (masuk scope TASK-010).
 - TASK-010 Split MapUiState per feature screen state (ADR-003) + VM unit tests dengan fakes — IN PROGRESS:
   - TASK-010a (0194112 + fix e6bbfda): MapUiState dipecah per fitur (LocationState, SearchState, RouteState, MapViewState, SettingsState); semua update site & pemakaian kini lewat slice-nya, termasuk MainActivity (uiState.settings.isDarkTheme — terlewat di commit pertama, menyebabkan build merah, diperbaiki di e6bbfda). CI pending untuk e6bbfda.
-  - TASK-010b (berikutnya): VM unit tests dengan fakes (prasyarat DI: TASK-009).
+  - TASK-010b: DONE (2c39061 + 68eccdf): repo dijadikan interface dengan impl *Impl (2c39061); 12 VM unit test dengan fakes via Robolectric (68eccdf). Path yang butuh GPS permission/service (tracking + rute dengan lokasi) tetap di regression manual device. CI pending.
 - TASK-011 Nominatim request hardening (accept-language, debounce >= 500ms) — setelah verifikasi policy.
 - TASK-012 Remove unused navigation-compose (BUG-011) + pindah logging-interceptor ke debugImplementation (TD-SEC-1) — dependency-only change.
 - TASK-013 Mitigasi CI flaky release (BUG-015): retry/cache lint deps.
