@@ -38,8 +38,7 @@ private const val SATELLITE_MAX_ZOOM = 19
 fun Style.updateRouteLine(route: OsrmRoute?) {
     val existing = getSourceAs<GeoJsonSource>(ROUTE_SOURCE_ID)
     if (route == null) {
-        exi
-sting?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+        existing?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
         return
     }
     val line = LineString.fromLngLats(route.geometry.coordinates.map { Point.fromLngLat(it[0], it[1]) })
@@ -84,8 +83,7 @@ fun Style.updateLocationDot(lat: Double?, lng: Double?) {
 
 /**
  * Toggles a free, keyless Esri World Imagery raster layer as a satellite view.
- * Since the base style's fill/background layers (land, water, buildi
-ngs) are opaque, they'd
+ * Since the base style's fill/background layers (land, water, buildings) are opaque, they'd
  * otherwise completely cover the raster — so this hides them while satellite is on, and
  * restores them when it's off. Line/symbol layers (roads, labels) stay visible on top either way.
  */
@@ -93,7 +91,7 @@ fun Style.setSatelliteVisible(visible: Boolean) {
     if (visible) {
         if (getLayer(SATELLITE_LAYER_ID) == null) {
             // CH-100 fix: MapLibre TileSet pakai mutator setMaxZoom(Float) — bukan
-            // withMaxZoom (itu API Mapbox SDK; compile error di CI, lihat run PR #1).
+            // builder-style withMaxZoom milik Mapbox SDK (tidak ada di MapLibre 11.5.2).
             val tileSet = TileSet(
                 "2.1.0",
                 "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
