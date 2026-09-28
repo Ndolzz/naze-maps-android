@@ -12,15 +12,15 @@ Format per bug; severity berdasar dampak & evidence kode, bukan perkiraan.
 
 ## BUG-002 — Route request tanpa GPS fix berdiam tanpa feedback
 - Severity: HIGH
-- Status: FIXED (TASK-008a, 5425679): requestRoute menampilkan banner Generic "Lokasi saya belum tersedia — aktifkan My Location dulu" bila myLocation null. CI + regression manual pending sebelum CLOSED final.
+- Status: FIXED (TASK-008a, 5425679). CI + regression manual pending sebelum CLOSED final.
 
 ## BUG-003 — Recent camera reset saat recenter (zoom/bearing mungkin ter-reset)
 - Severity: MEDIUM
-- Status: OPEN — perlu verifikasi runtime (default CameraPosition.Builder MapLibre UNKNOWN). Catatan: TASK-008b menambah flyTo eksplisit zoom 15 untuk selectedPlace, jadi bug ini kini khusus jalur tracking-recenter.
+- Status: OPEN — perlu verifikasi runtime (default CameraPosition.Builder MapLibre UNKNOWN).
 
 ## BUG-004 — Selected place tidak menggerakkan kamera / tanpa marker
 - Severity: MEDIUM
-- Status: FIXED sebagian (TASK-008b, f1f431a): fly-to via animateCamera(newLatLngZoom, 15.0) untuk selectedPlace dari search & history. Marker pin belum dibuat — dicatat sebagai future change kecil (bukan bug tersisa; acceptance disesuaikan). CI + regression manual pending.
+- Status: FIXED sebagian (TASK-008b, f1f431a): fly-to zoom 15 untuk selectedPlace. Marker pin = future change kecil. CI + regression manual pending.
 
 ## BUG-005 — Race condition update MapUiState (lost update)
 - Severity: MEDIUM
@@ -36,10 +36,9 @@ Format per bug; severity berdasar dampak & evidence kode, bukan perkiraan.
 
 ## BUG-008 — Nominatim: tanpa accept-language; debounce 350ms agresif
 - Severity: MEDIUM (risiko 403)
-- Status: FIXED (TASK-011, dd159ce): accept-language + debounce 500ms. CI pending sebelum CLOSED final.
+- Status: FIXED (TASK-011, dd159ce). CI pending sebelum CLOSED final.
 
-## BUG-009 — Dead code: renameFavorite & isSaved tidak per
-nah dipanggil UI
+## BUG-009 — Dead code: renameFavorite & isSaved tidak pernah dipanggil UI
 - Severity: LOW
 - Status: OPEN (keputusan via change request)
 
@@ -49,7 +48,7 @@ nah dipanggil UI
 
 ## BUG-011 — Dependency navigation-compose tidak dipakai
 - Severity: LOW
-- Status: FIXED (TASK-012, 664c593): dihapus; logging-interceptor → debugImplementation. CI pending sebelum CLOSED final.
+- Status: FIXED (TASK-012, 664c593). CI pending sebelum CLOSED final.
 
 ## BUG-012 — Tracking location tetap jalan saat user pindah tab
 - Severity: MEDIUM
@@ -65,33 +64,35 @@ nah dipanggil UI
 
 ## BUG-015 — CI release build flaky: lintVitalAnalyzeRelease timeout download dependency
 - Severity: MEDIUM (hanya jalur release)
-- Status: FIXED (TASK-013, 2c37af3): retry 3x + cache lint deps. CI pending sebelum CLOSED final.
+- Status: FIXED (TASK-013, 2c37af3). CI pending sebelum CLOSED final.
 
 ## BUG-016 — Satellite: placeholder "Map data not yet available" pada zoom sangat dekat
 - Severity: MEDIUM
-- Affected feature: satellite mode
-- Root cause (CONFIRMED, evidence MapOverlay.kt): RasterSource Esri World Imagery tanpa maxZoom; provider tidak menyediakan tile z>=20 → 404 → MapLibre menampilkan placeholder. Bukan network/cache/SDK issue.
-- Status: FIXED (CH-100): TileSet maxZoom 19 → raster overzoom dari tile induk. CI + regression manual pending sebelum CLOSED final.
+- Root cause (CONFIRMED, evidence MapOverlay.kt): RasterSource Esri World Imagery tanpa maxZoom; placeholder muncul saat tile tidak tersedia pada zoom tersebut.
+- Evidence tambahan (2026-09-28, MapServer f=json): layanan mendeklarasikan LOD hingga level 23, ketersediaan aktual per-area bervariasi ("one meter or better in many parts of the world"). maxZoom 19 = floor aman global untuk raster overzoom.
+- Status: FIXED (CH-100, build 61b98a9): setMaxZoom(19f). CATATAN: screenshot device 2026-09-28 17:19 masih menampilkan placeholder — APK uji dibangun SEBELUM fix yang compilable (98c804d/8323107 gagal compile; fix valid pertama = 61b98a9). Verifikasi ulang wajib dengan build >= 61b98a9. Bila placeholder masih muncul pada build tersebut → buka investigasi baru (network/UA/region coverage), jangan tutup bug.
 
 ## BUG-017 — Bottom navigation permanen menutupi peta; map tidak fullscreen; search bar berat
 - Severity: MEDIUM (UX)
-- Root cause (CONFIRMED): NazeBottomNav 72dp di Scaffold.bottomBar pada semua tab; search OutlinedTextField penuh lebar.
-- Status: FIXED (CH-101): bottom nav → overflow menu compact kanan-atas; search → compact floating pill. Mapping fitur didokumentasikan di CH-101. CI + regression manual pen
-ding sebelum CLOSED final.
+- Status: FIXED (CH-101): bottom nav → overflow menu; search → compact pill. CI + regression manual pending sebelum CLOSED final.
 
 ## BUG-018 — Splash generik: launcher icon tanpa motion, tanpa identitas brand
 - Severity: LOW (UX)
-- Root cause (CONFIRMED): themes.xml Theme.NazeMaps.Splash hanya background + ic_launcher_foreground; tidak ada motion layer.
-- Status: FIXED (CH-102): SplashOverlay "Map Comes Alive" (route-line reveal + mark fade/scale + typography), readiness-driven (isReady = style loaded), tanpa timer/delay; native splash tetap untuk cold-start. CI + regression manual pending sebelum CLOSED final.
+- Status: FIXED (CH-102): SplashOverlay "Map Comes Alive", readiness-driven. CI + regression manual pending sebelum CLOSED final.
+
+## BUG-019 — Kompas menumpuk/berasa tidak rapi di area kanan map
+- Severity: LOW (UX)
+- Root cause (CONFIRMED, evidence screenshot device 2026-09-28 17:16): CompassFab berada di kolom FAB kanan-bawah sementara menu [⋮] + search bar end berdesakan di kanan-atas; hierarchy kontrol kanan tidak konsisten.
+- Status: FIXED (CH-103): CompassFab dipindah ke top-end tepat di bawah tombol [⋮] (statusBarsPadding + top 60dp + end 12dp); kolom kanan-bawah kini hanya Layers + MyLocation. Behavior kompas tidak berubah. CI + regression manual pending sebelum CLOSED final.
 
 ## Deprecation warnings (technical debt, bukan bug)
-- SearchBar.kt `outlinedTextFieldColors` → TERATASI CH-101 (OutlinedTextFieldDefaults.colors).
-- MapScreen.kt `Icons.Filled.DirectionsWalk/Bike` → AutoMirrored (TD-CQ-5) — masih OPEN.
+- SearchBar.kt outlinedTextFieldColors → TERATASI CH-101.
+- MapScreen.kt Icons.Filled.DirectionsWalk/Bike → AutoMirrored (TD-CQ-5) — masih OPEN.
 
 ## Potential (belum ada evidence runtime)
 
-- P-1: CompassFab -headingDegrees rotasi vs screen rotation (landscape) — UNKNOWN.
+- P-1: CompassFab -headingDegrees rotasi vs screen rotation (landscape) — UNKNOWN. (Semakin relevan setelah CH-103: cek di landscape.)
 - P-2: Proguard release keep-rules mungkin kurang → release bisa crash. UNKNOWN.
 - P-3: Race setStyle saat toggle tema cepat — mitigasi LaunchedEffect ada, edge UNKNOWN.
-- P-4: selectHistoryEntry tidak record ulang riwayat (fly-to kini teratasi TASK-008b; record ulang masih tidak dilakukan — konsisten baseline).
-- P-5 (BARU, CH-101): overflow menu overlay kanan-atas berpotensi overlap visual dengan header/konten screen non-map — cek saat regression manual.
+- P-4: selectHistoryEntry tidak record ulang riwayat — konsisten baseline.
+- P-5 (BERGESER ke BUG-019): overlap visual kontrol kanan-atas — kini FIXED (CH-103); sisa cek: overlap menu vs header screen non-map saat regression manual.

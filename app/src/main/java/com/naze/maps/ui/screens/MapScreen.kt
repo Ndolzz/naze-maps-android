@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -80,7 +81,7 @@ fun MapScreen(modifier: Modifier = Modifier) {
     var maplibreMap by remember { mutableStateOf<MapLibreMap?>(null) }
     var mapStyle by remember { mutableStateOf<Style?>(null) }
 
-    // CH-102 (BUG-018): splash presentasi one-shot — sekai dismiss, tidak muncul lagi
+    // CH-102 (BUG-018): splash presentasi one-shot — sekali dismiss, tidak muncul lagi
     // (tab switch / theme switch tidak memutar ulang splash).
     var splashDismissed by remember { mutableStateOf(false) }
 
@@ -139,6 +140,29 @@ fun MapScreen(modifier: Modifier = Modifier) {
             onMapReady = { map -> maplibreMap = map },
             onStyleLoaded = { style -> mapStyle = style },
         )
+
+        // CH-103 (BUG-019): kompas dipindah ke top-end, tepat di bawah tombol menu [⋮]
+        // (menu: statusBarsPadding + top 12dp + 40dp tinggi; jadi kompas mulai 60dp di bawah
+        // status bar, sejajar margin kanan menu). Tidak lagi menumpuk dengan kolom FAB kanan-bawah.
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(top = 60.dp, end = 12.dp),
+        ) {
+            CompassFab(
+                headingDegrees = state.location.headingDegrees,
+                onResetNorth = {
+                    maplibreMap?.let { map ->
+                        map.cameraPosition = CameraPosition.Builder()
+                            .target(map.cameraPosition.target)
+                            .bearing(0.0)
+                            .zoom(map.cameraPosition.zoom)
+                            .build()
+                    }
+                },
+            )
+        }
 
         Column(
             modifier = Modifier
@@ -235,18 +259,6 @@ fun MapScreen(modifier: Modifier = Modifier) {
                     modifier = Modifier.align(Alignment.BottomEnd),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    CompassFab(
-                        headingDegrees = state.location.headingDegrees,
-                        onResetNorth = {
-                            maplibreMap?.let { map ->
-                                map.cameraPosition = CameraPosition.Builder()
-                                    .target(map.cameraPosition.target)
-                                    .bearing(0.0)
-                                    .zoom(map.cameraPosition.zoom)
-                                    .build()
-                            }
-                        },
-                    )
                     LayersFab(
                         isActive = state.map.isSatelliteOn,
                         onClick = viewModel::toggleSatellite,
@@ -265,8 +277,9 @@ fun MapScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        // Map loading state (plain branded overlay) — kini hanya untuk reload style setelah
-        // splash one-shot selesai (splash menutup first load; keduanya tidak menumpuk).
+        // Selalu di atas — biar buka app gak pernah nge-flash peta kosong/abu-abu sebelum
+        // style dan tile pertama kelar dimuat. Fade out mulus begitu peta siap.
+        // Kini hanya untuk reload style SETELAH splash one-shot selesai (tidak menumpuk).
         AnimatedVisibility(
             visible = mapStyle == null && splashDismissed,
             exit = fadeOut(animationSpec = tween(durationMillis = 450)),
@@ -276,9 +289,7 @@ fun MapScreen(modifier: Modifier = Modifier) {
         }
 
         // CH-102 (BUG-018): brand splash "Map Comes Alive" — one-shot, readiness-driven.
-        // isReady = map style loaded (real initialization signal, bukan timer). Fade-out
-        // 450ms memberi transisi natural ke map; native SplashScreen API (system) tetap
-        // menangani cold-start instan sebelum Compose tergambar.
+        // isReady = map style loaded (real initialization signal, bukan timer).
         AnimatedVisibility(
             visible = !splashDismissed,
             exit = fadeOut(animationSpec = tween(durationMillis = 450)),
