@@ -34,6 +34,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.7"
+          # TASK-013 (BUG-015): pastikan dependensi yang diunduh saat build
+          # (termasuk detached lint configuration intellij-core dll.) ikut
+          # ter-cache di Gradle User Home, sehingga run berikutnya tidak
+          # bergantung pada network dl.google.com lagi.
+          gradle-home-cache-includes: |
+            caches
+            notifications
 
       - name: Build debug APK
         run: gradle assembleDebug --no-daemon
@@ -43,7 +50,20 @@ jobs:
 
       - name: Build release APK (unsigned)
         if: github.ref == 'refs/heads/main'
-        run: gradle assembleRelease --no-daemon
+        # TASK-013 (BUG-015): lintVitalAnalyzeRelease pernah gagal "Read timed out"
+        # mengunduh intellij-core dari dl.google.com — download transient, bukan
+        # error kode. Retry hingga 3x; setelah run pertama sukses, deps lint sudah
+        # ter-cache (Gradle User Home) dan retry hampir tidak pernah terpakai.
+        run: |
+          for attempt in 1 2 3; do
+            if gradle assembleRelease --no-daemon; then
+              exit 0
+            fi
+            echo "::warning::assembleRelease attempt $attempt failed — retrying"
+            sleep 15
+          done
+          echo "::error::assembleRelease failed after 3 attempts"
+          exit 1
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
