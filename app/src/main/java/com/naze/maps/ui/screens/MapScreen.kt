@@ -60,6 +60,7 @@ import com.naze.maps.ui.components.LayersFab
 import com.naze.maps.ui.components.MapLoadingOverlay
 import com.naze.maps.ui.components.MyLocationFab
 import com.naze.maps.ui.components.NazeSearchBar
+import com.naze.maps.ui.components.SplashOverlay
 import com.naze.maps.utils.GeoPoint
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -78,6 +79,10 @@ fun MapScreen(modifier: Modifier = Modifier) {
 
     var maplibreMap by remember { mutableStateOf<MapLibreMap?>(null) }
     var mapStyle by remember { mutableStateOf<Style?>(null) }
+
+    // CH-102 (BUG-018): splash presentasi one-shot — sekai dismiss, tidak muncul lagi
+    // (tab switch / theme switch tidak memutar ulang splash).
+    var splashDismissed by remember { mutableStateOf(false) }
 
     val permissionState = rememberMultiplePermissionsState(PermissionUtils.requiredPermissions.toList()) { results ->
         viewModel.onPermissionResult(results.values.any { it })
@@ -260,14 +265,29 @@ fun MapScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        // Selalu di atas — biar buka app gak pernah nge-flash peta kosong/abu-abu sebelum
-        // style dan tile pertama kelar dimuat. Fade out mulus begitu peta siap.
+        // Map loading state (plain branded overlay) — kini hanya untuk reload style setelah
+        // splash one-shot selesai (splash menutup first load; keduanya tidak menumpuk).
         AnimatedVisibility(
-            visible = mapStyle == null,
+            visible = mapStyle == null && splashDismissed,
             exit = fadeOut(animationSpec = tween(durationMillis = 450)),
             modifier = Modifier.fillMaxSize(),
         ) {
             MapLoadingOverlay()
+        }
+
+        // CH-102 (BUG-018): brand splash "Map Comes Alive" — one-shot, readiness-driven.
+        // isReady = map style loaded (real initialization signal, bukan timer). Fade-out
+        // 450ms memberi transisi natural ke map; native SplashScreen API (system) tetap
+        // menangani cold-start instan sebelum Compose tergambar.
+        AnimatedVisibility(
+            visible = !splashDismissed,
+            exit = fadeOut(animationSpec = tween(durationMillis = 450)),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            SplashOverlay(
+                isReady = mapStyle != null,
+                onDismiss = { splashDismissed = true },
+            )
         }
 
         state.route.selectedPlace?.let { place ->

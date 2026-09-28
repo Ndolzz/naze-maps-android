@@ -38,7 +38,8 @@ Format per bug; severity berdasar dampak & evidence kode, bukan perkiraan.
 - Severity: MEDIUM (risiko 403)
 - Status: FIXED (TASK-011, dd159ce): accept-language + debounce 500ms. CI pending sebelum CLOSED final.
 
-## BUG-009 — Dead code: renameFavorite & isSaved tidak pernah dipanggil UI
+## BUG-009 — Dead code: renameFavorite & isSaved tidak per
+nah dipanggil UI
 - Severity: LOW
 - Status: OPEN (keputusan via change request)
 
@@ -75,12 +76,13 @@ Format per bug; severity berdasar dampak & evidence kode, bukan perkiraan.
 ## BUG-017 — Bottom navigation permanen menutupi peta; map tidak fullscreen; search bar berat
 - Severity: MEDIUM (UX)
 - Root cause (CONFIRMED): NazeBottomNav 72dp di Scaffold.bottomBar pada semua tab; search OutlinedTextField penuh lebar.
-- Status: FIXED (CH-101): bottom nav → overflow menu compact kanan-atas; search → compact floating pill. Mapping fitur didokumentasikan di CH-101. CI + regression manual pending sebelum CLOSED final.
+- Status: FIXED (CH-101): bottom nav → overflow menu compact kanan-atas; search → compact floating pill. Mapping fitur didokumentasikan di CH-101. CI + regression manual pen
+ding sebelum CLOSED final.
 
 ## BUG-018 — Splash generik: launcher icon tanpa motion, tanpa identitas brand
 - Severity: LOW (UX)
 - Root cause (CONFIRMED): themes.xml Theme.NazeMaps.Splash hanya background + ic_launcher_foreground; tidak ada motion layer.
-- Status: OPEN — spec CH-102 (PROPOSED); implementation task terpisah.
+- Status: FIXED (CH-102): SplashOverlay "Map Comes Alive" (route-line reveal + mark fade/scale + typography), readiness-driven (isReady = style loaded), tanpa timer/delay; native splash tetap untuk cold-start. CI + regression manual pending sebelum CLOSED final.
 
 ## Deprecation warnings (technical debt, bukan bug)
 - SearchBar.kt `outlinedTextFieldColors` → TERATASI CH-101 (OutlinedTextFieldDefaults.colors).

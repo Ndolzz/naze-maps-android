@@ -2,7 +2,14 @@
 
 - ID: CH-102
 - Type: UI/UX REDESIGN (BUG-018)
-- Status: PROPOSED — implementation sebagai task terpisah setelah CH-100/101 diverifikasi.
+- Status: IMPLEMENTED (commit di branch sdd/phase3-ui; CI + regression manual pending)
+
+## Implementation notes (final)
+- File baru: app/src/main/java/com/naze/maps/ui/components/SplashOverlay.kt — presentasi only.
+- Splash one-shot di MapScreen (splashDismissed state), isReady = mapStyle != null (real readiness signal, bukan timer). Bila ready lebih cepat dari animasi, splash dismiss segera (fade 450ms) — user tidak pernah menunggu art. Bila init lambat, splash diam di frame akhir (statis, berlabel) — tanpa loop.
+- MapLoadingOverlay tetap untuk reload style berikutnya; kondisinya kini `mapStyle == null && splashDismissed` agar tidak menumpuk dengan splash first-load.
+- Native SplashScreen API (Theme.NazeMaps.Splash di manifest) tidak diubah — tetap menangani cold-start instan pre-Compose.
+- Motion: SATU progress Animatable 900ms (FastOutSlowIn): route-line mask/reveal (clipRect, alpha 0.35, NazeRoute) + location dot + marker tujuan; mark fade + scale 0.92→1.0 (tanpa rotasi); typography "NAZE MAPS" + tagline fade-in. Tanpa spinner/particle/neon/3D/loop.
 
 ## Current (evidence)
 - Manifest: MainActivity theme Theme.NazeMaps.Splash.
