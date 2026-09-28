@@ -1,5 +1,6 @@
 package com.naze.maps.ui.screens
 
+import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.naze.maps.data.SettingsDataStore
@@ -41,9 +42,13 @@ import org.robolectric.annotation.Config
  * TASK-010b: unit tests for MapViewModel using constructor-injected fakes
  * (TASK-009/TASK-010b interfaces). Robolectric is only here to provide the
  * Application instance that AndroidViewModel requires.
+ *
+ * NOTE: application is overridden to plain android.app.Application because the
+ * manifest's NazeMapsApp calls MapLibre.getInstance() in onCreate, and MapLibre's
+ * native library cannot load on the JVM (UnsatisfiedLinkError).
  */
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [34])
+@Config(sdk = [34], application = Application::class)
 class MapViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
