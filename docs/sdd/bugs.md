@@ -36,7 +36,7 @@ Format per bug; severity berdasar dampak & evidence kode, bukan perkiraan.
 
 ## BUG-008 — Nominatim: tanpa accept-language; debounce 350ms agresif
 - Severity: MEDIUM (risiko 403)
-- Status: OPEN — TASK-011
+- Status: FIXED (TASK-011, dd159ce): accept-language + debounce 500ms. CI pending sebelum CLOSED final.
 
 ## BUG-009 — Dead code: renameFavorite & isSaved tidak pernah dipanggil UI
 - Severity: LOW
@@ -48,7 +48,7 @@ Format per bug; severity berdasar dampak & evidence kode, bukan perkiraan.
 
 ## BUG-011 — Dependency navigation-compose tidak dipakai
 - Severity: LOW
-- Status: OPEN — TASK-012
+- Status: FIXED (TASK-012, 664c593): dihapus; logging-interceptor → debugImplementation. CI pending sebelum CLOSED final.
 
 ## BUG-012 — Tracking location tetap jalan saat user pindah tab
 - Severity: MEDIUM
@@ -64,11 +64,27 @@ Format per bug; severity berdasar dampak & evidence kode, bukan perkiraan.
 
 ## BUG-015 — CI release build flaky: lintVitalAnalyzeRelease timeout download dependency
 - Severity: MEDIUM (hanya jalur release)
-- Status: OPEN — TASK-013
+- Status: FIXED (TASK-013, 2c37af3): retry 3x + cache lint deps. CI pending sebelum CLOSED final.
+
+## BUG-016 — Satellite: placeholder "Map data not yet available" pada zoom sangat dekat
+- Severity: MEDIUM
+- Affected feature: satellite mode
+- Root cause (CONFIRMED, evidence MapOverlay.kt): RasterSource Esri World Imagery tanpa maxZoom; provider tidak menyediakan tile z>=20 → 404 → MapLibre menampilkan placeholder. Bukan network/cache/SDK issue.
+- Status: FIXED (CH-100): TileSet maxZoom 19 → raster overzoom dari tile induk. CI + regression manual pending sebelum CLOSED final.
+
+## BUG-017 — Bottom navigation permanen menutupi peta; map tidak fullscreen; search bar berat
+- Severity: MEDIUM (UX)
+- Root cause (CONFIRMED): NazeBottomNav 72dp di Scaffold.bottomBar pada semua tab; search OutlinedTextField penuh lebar.
+- Status: FIXED (CH-101): bottom nav → overflow menu compact kanan-atas; search → compact floating pill. Mapping fitur didokumentasikan di CH-101. CI + regression manual pending sebelum CLOSED final.
+
+## BUG-018 — Splash generik: launcher icon tanpa motion, tanpa identitas brand
+- Severity: LOW (UX)
+- Root cause (CONFIRMED): themes.xml Theme.NazeMaps.Splash hanya background + ic_launcher_foreground; tidak ada motion layer.
+- Status: OPEN — spec CH-102 (PROPOSED); implementation task terpisah.
 
 ## Deprecation warnings (technical debt, bukan bug)
-- SearchBar.kt:42 `outlinedTextFieldColors` → `OutlinedTextFieldDefaults.colors`
-- MapScreen.kt `Icons.Filled.DirectionsWalk/Bike` → AutoMirrored (TD-CQ-5)
+- SearchBar.kt `outlinedTextFieldColors` → TERATASI CH-101 (OutlinedTextFieldDefaults.colors).
+- MapScreen.kt `Icons.Filled.DirectionsWalk/Bike` → AutoMirrored (TD-CQ-5) — masih OPEN.
 
 ## Potential (belum ada evidence runtime)
 
@@ -76,3 +92,4 @@ Format per bug; severity berdasar dampak & evidence kode, bukan perkiraan.
 - P-2: Proguard release keep-rules mungkin kurang → release bisa crash. UNKNOWN.
 - P-3: Race setStyle saat toggle tema cepat — mitigasi LaunchedEffect ada, edge UNKNOWN.
 - P-4: selectHistoryEntry tidak record ulang riwayat (fly-to kini teratasi TASK-008b; record ulang masih tidak dilakukan — konsisten baseline).
+- P-5 (BARU, CH-101): overflow menu overlay kanan-atas berpotensi overlap visual dengan header/konten screen non-map — cek saat regression manual.
