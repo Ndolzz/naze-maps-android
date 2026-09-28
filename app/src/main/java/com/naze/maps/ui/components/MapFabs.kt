@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.ThreeSixty
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +38,21 @@ fun LayersFab(isActive: Boolean, onClick: () -> Unit, modifier: Modifier = Modif
         contentColor = if (isActive) Color.White else MaterialTheme.colorScheme.onSurface,
     ) {
         Icon(Icons.Filled.Layers, contentDescription = "Tampilan satellite")
+    }
+}
+
+/**
+ * CH-114: mode ikuti kamera — bearing peta mengikuti arah hadap pengguna.
+ */
+@Composable
+fun FollowCameraFab(isActive: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    FloatingActionButton(
+        onClick = onClick,
+        modifier = modifier.size(48.dp),
+        containerColor = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+        contentColor = if (isActive) Color.White else MaterialTheme.colorScheme.onSurface,
+    ) {
+        Icon(Icons.Filled.ThreeSixty, contentDescription = "Mode ikuti kamera")
     }
 }
 

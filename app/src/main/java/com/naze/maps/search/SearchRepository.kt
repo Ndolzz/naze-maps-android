@@ -15,6 +15,9 @@ sealed class SearchOutcome {
 interface SearchRepository {
     suspend fun search(query: String): SearchOutcome
     suspend fun geocodeOne(query: String): NominatimResult?
+
+    /** CH-113: alamat untuk satu titik (tekan lama di peta); null bila gagal atau kosong. */
+    suspend fun reverseGeocode(lat: Double, lon: Double): NominatimResult?
 }
 
 class SearchRepositoryImpl(
@@ -35,4 +38,12 @@ class SearchRepositoryImpl(
     /** Used by the distance calculator to resolve a single place name to coordinates. */
     override suspend fun geocodeOne(query: String): NominatimResult? =
         (search(query) as? SearchOutcome.Success)?.results?.firstOrNull()
+
+    /** CH-113: dipakai sheet tekan lama untuk menampilkan nama tempat di atas koordinat. */
+    override suspend fun reverseGeocode(lat: Double, lon: Double): NominatimResult? =
+        try {
+            api.reverse(lat, lon)
+        } catch (e: Exception) {
+            null
+        }
 }

@@ -21,8 +21,17 @@ private const val ROUTE_SOURCE_ID = "naze-route-source"
 private const val ROUTE_LAYER_ID = "naze-route-layer"
 private const val LOCATION_SOURCE_ID = "naze-location-source"
 private const val LOCATION_LAYER_ID = "naze-location-layer"
+private const val SELECTED_SOURCE_ID = "naze-selected-source"
+private const val SELECTED_LAYER_ID = "naze-selected-layer"
 private const val SATELLITE_SOURCE_ID = "naze-satellite-source"
 private const val SATELLITE_LAYER_ID = "naze-satellite-layer"
+
+// CH-100 (BUG-016): Esri World Imagery hanya menyediakan tile hingga level ~19 (LOD maksimum
+// layanan; sebagian area lebih rendah). Tanpa maxZoom, MapLibre meminta tile z>=20 yang 404
+// dan menampilkan placeholder "Map data not yet available". Dengan maxZoom ter-set, MapLibre
+// melakukan raster overzoom: tile z19 induk diskalakan — imagery tetap tampil, tidak ada
+// penurunan informasi (provider memang tidak pernah punya detail z>19).
+private const val SATELLITE_MAX_ZOOM = 19
 
 /**
  * Draws the active route as a line on the map (or clears it when [route] is null).
@@ -75,6 +84,34 @@ fun Style.updateLocationDot(lat: Double?, lng: Double?) {
 }
 
 /**
+ * CH-108 (follow up BUG-004): draws (or clears) a marker on the currently selected place so it
+ * stays visible even after the user pans the camera away. Red circle with white stroke, same
+ * source-and-layer pattern as updateLocationDot. Re-adds itself after a style reload because
+ * MapLibre drops custom sources/layers whenever setStyle() runs.
+ */
+fun Style.updateSelectedPlaceMarker(lat: Double?, lng: Double?) {
+    val existing = getSourceAs<GeoJsonSource>(SELECTED_SOURCE_ID)
+    if (lat == null || lng == null) {
+        existing?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+        return
+    }
+    val point = Point.fromLngLat(lng, lat)
+    if (existing != null) {
+        existing.setGeoJson(point)
+    } else {
+        addSource(GeoJsonSource(SELECTED_SOURCE_ID, point))
+        // Draw above everything that exists so far (route line, location dot).
+        val layer = CircleLayer(SELECTED_LAYER_ID, SELECTED_SOURCE_ID).withProperties(
+            PropertyFactory.circleRadius(10f),
+            PropertyFactory.circleColor("#E5484D"),
+            PropertyFactory.circleStrokeColor("#FFFFFF"),
+            PropertyFactory.circleStrokeWidth(2.5f),
+        )
+        if (getLayer(LOCATION_LAYER_ID) != null) addLayerAbove(layer, LOCATION_LAYER_ID) else addLayer(layer)
+    }
+}
+
+/**
  * Toggles a free, keyless Esri World Imagery raster layer as a satellite view.
  * Since the base style's fill/background layers (land, water, buildings) are opaque, they'd
  * otherwise completely cover the raster — so this hides them while satellite is on, and
@@ -83,10 +120,13 @@ fun Style.updateLocationDot(lat: Double?, lng: Double?) {
 fun Style.setSatelliteVisible(visible: Boolean) {
     if (visible) {
         if (getLayer(SATELLITE_LAYER_ID) == null) {
+            // CH-100 fix: MapLibre TileSet pakai mutator setMaxZoom(Float) — bukan
+            // builder-style API milik Mapbox SDK yang tidak ada di MapLibre 11.5.2.
             val tileSet = TileSet(
                 "2.1.0",
                 "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
             )
+            tileSet.setMaxZoom(SATELLITE_MAX_ZOOM.toFloat())
             addSource(RasterSource(SATELLITE_SOURCE_ID, tileSet, 256))
             addLayerAt(RasterLayer(SATELLITE_LAYER_ID, SATELLITE_SOURCE_ID), 0)
         }

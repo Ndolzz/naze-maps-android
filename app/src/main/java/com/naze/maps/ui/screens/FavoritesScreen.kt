@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
@@ -19,12 +20,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
+/**
+ * CH-106: each card gained a one-tap route button (Rute ke sini). The screen now takes an
+ * [onNavigateToMap] callback because the route request and its banners (e.g. My Location
+ * belum aktif) only make sense on the map tab — silently requesting a route while the user
+ * stays on this list would hide both the line and the banner.
+ */
 @Composable
-fun FavoritesScreen(modifier: Modifier = Modifier) {
+fun FavoritesScreen(
+    onNavigateToMap: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val viewModel: MapViewModel = viewModel()
     val favorites by viewModel.favorites.collectAsState(initial = emptyList())
 
@@ -46,15 +57,24 @@ fun FavoritesScreen(modifier: Modifier = Modifier) {
             Card(modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(14.dp),
-                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(fav.name, style = MaterialTheme.typography.bodyLarge)
                         Text(fav.address, style = MaterialTheme.typography.labelSmall)
                     }
                     Row {
-                        Icon(Icons.Filled.Place, contentDescription = null)
+                        IconButton(onClick = {
+                            viewModel.routeFromFavorite(fav)
+                            onNavigateToMap()
+                        }) {
+                            Icon(
+                                Icons.Filled.DirectionsCar,
+                                contentDescription = "Rute ke sini",
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                         IconButton(onClick = {
                             viewModel.deleteFavoriteFromScreen(fav)
                         }) {

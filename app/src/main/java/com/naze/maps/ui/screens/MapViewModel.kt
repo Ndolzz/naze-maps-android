@@ -1,10 +1,13 @@
 package com.naze.maps.ui.screens
 
 import android.app.Application
+import android.content.res.Configuration
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.naze.maps.data.SettingsDataStore
 import com.naze.maps.data.SettingsDataStoreImpl
+import com.naze.maps.data.ThemeMode
+import com.naze.maps.favorites.FavoriteEntity
 import com.naze.maps.favorites.FavoritesRepository
 import com.naze.maps.favorites.FavoritesRepositoryImpl
 import com.naze.maps.history.HistoryEntity
@@ -63,14 +66,20 @@ data class SearchState(
 data class RouteState(
     val selectedPlace: NominatimResult? = null,
     val activeRoute: OsrmRoute? = null,
+    // CH-109: profil yang dipakai untuk rute aktif, agar kartu ringkasan tampilkan mode.
+    val activeProfile: RoutingProfile? = null,
 )
 
 data class MapViewState(
     val isSatelliteOn: Boolean = false,
+    // CH-114: mode ikuti kamera — bearing peta mengikuti arah hadap pengguna.
+    val isFollowCameraOn: Boolean = false,
 )
 
 data class SettingsState(
     val distanceUnit: DistanceUnit = DistanceUnit.KM,
+    // CH-111: mode tema pilihan pengguna; isDarkTheme adalah nilai terresolve untuk UI.
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val isDarkTheme: Boolean = true,
 )
 
@@ -80,6 +89,9 @@ data class MapUiState(
     val route: RouteState = RouteState(),
     val map: MapViewState = MapViewState(),
     val settings: SettingsState = SettingsState(),
+    // CH-113: hasil reverse geocoding untuk titik yang ditekan lama di peta.
+    val longPressAddress: String? = null,
+    val isResolvingLongPress: Boolean = false,
     val banner: MapBanner? = null,
 )
 
@@ -113,9 +125,25 @@ class MapViewModel @JvmOverloads constructor(
     private var compassJob: Job? = null
     private var searchJob: Job? = null
 
+    // CH-111: mode SYSTEM berarti mengikuti mode terang atau gelap perangkat saat ini.
+    private fun resolvedDark(mode: ThemeMode): Boolean = when (mode) {
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+        ThemeMode.SYSTEM -> {
+            val nightMode = getApplication<Application>().resources.configuration.uiMode and
+                Configuration.UI_MODE_NIGHT_MASK
+            nightMode == Configuration.UI_MODE_NIGHT_YES
+        }
+    }
+
     init {
         viewModelScope.launch {
-            settings.isDarkTheme.collect { dark -> _uiState.update { it.copy(settings = it.settings.copy(isDarkTheme = dark)) } }
+            // CH-111: koleksi mode tema; isDarkTheme adalah hasil resolve yang dipakai UI.
+            settings.themeMode.collect { mode ->
+                _uiState.update {
+                    it.copy(settings = it.settings.copy(themeMode = mode, isDarkTheme = resolvedDark(mode)))
+                }
+            }
         }
         viewModelScope.launch {
             settings.distanceUnit.collect { unit -> _uiState.update { it.copy(settings = it.settings.copy(distanceUnit = unit)) } }
@@ -214,11 +242,31 @@ class MapViewModel @JvmOverloads constructor(
     fun selectHistoryEntry(entry: HistoryEntity) {
         val place = NominatimResult(
             placeId = entry.id,
-            displayName = if (entry.address.isNotBlank()) "${entry.name}, ${entry.address}" else entry.name,
+            displayName = if (entry.address.isNotBlank()) entry.name + ", " + entry.address else entry.name,
             lat = entry.latitude.toString(),
             lon = entry.longitude.toString(),
         )
         _uiState.update { it.copy(route = it.route.copy(selectedPlace = place), search = it.search.copy(results = emptyList())) }
+    }
+
+    /**
+     * CH-106: selects a favorite as the current place, without hitting Nominatim.
+     * Same pattern as selectHistoryEntry.
+     */
+    fun selectFavoriteAsPlace(favorite: FavoriteEntity) {
+        val place = NominatimResult(
+            placeId = favorite.id,
+            displayName = if (favorite.address.isNotBlank()) favorite.name + ", " + favorite.address else favorite.name,
+            lat = favorite.latitude.toString(),
+            lon = favorite.longitude.toString(),
+        )
+        _uiState.update { it.copy(route = it.route.copy(selectedPlace = place), search = it.search.copy(results = emptyList(), query = "")) }
+    }
+
+    /** CH-106: one tap from the favorites list — select the place, then request a driving route. */
+    fun routeFromFavorite(favorite: FavoriteEntity) {
+        selectFavoriteAsPlace(favorite)
+        requestRoute(GeoPoint(favorite.latitude, favorite.longitude), RoutingProfile.DRIVING)
     }
 
     fun deleteHistoryEntry(entry: HistoryEntity) {
@@ -230,7 +278,12 @@ class MapViewModel @JvmOverloads constructor(
     }
 
     fun clearSelection() {
-        _uiState.update { it.copy(route = it.route.copy(selectedPlace = null, activeRoute = null)) }
+        _uiState.update { it.copy(route = it.route.copy(selectedPlace = null, activeRoute = null, activeProfile = null)) }
+    }
+
+    /** CH-109: menutup hanya garis rute dan kartu ringkasan, tanpa melepas pilihan tempat. */
+    fun clearRoute() {
+        _uiState.update { it.copy(route = it.route.copy(activeRoute = null, activeProfile = null)) }
     }
 
     fun requestRoute(to: GeoPoint, profile: RoutingProfile) {
@@ -247,7 +300,7 @@ class MapViewModel @JvmOverloads constructor(
                 GeoPoint(from.latitude, from.longitude), to, profile,
             )) {
                 is RouteOutcome.Success -> _uiState.update {
-                    it.copy(route = it.route.copy(activeRoute = outcome.routes.first()), banner = null)
+                    it.copy(route = it.route.copy(activeRoute = outcome.routes.first(), activeProfile = profile), banner = null)
                 }
                 RouteOutcome.NoInternet -> _uiState.update { it.copy(banner = MapBanner.NoInternet) }
                 RouteOutcome.NoRouteFound -> _uiState.update {
@@ -264,11 +317,11 @@ class MapViewModel @JvmOverloads constructor(
         viewModelScope.launch { favoritesRepo.save(name, address, lat, lng) }
     }
 
-    fun deleteFavoriteFromScreen(favorite: com.naze.maps.favorites.FavoriteEntity) {
+    fun deleteFavoriteFromScreen(favorite: FavoriteEntity) {
         viewModelScope.launch { favoritesRepo.delete(favorite) }
     }
 
-    fun renameFavorite(favorite: com.naze.maps.favorites.FavoriteEntity, newName: String) {
+    fun renameFavorite(favorite: FavoriteEntity, newName: String) {
         viewModelScope.launch { favoritesRepo.rename(favorite, newName) }
     }
 
@@ -285,8 +338,32 @@ class MapViewModel @JvmOverloads constructor(
         _uiState.update { it.copy(map = it.map.copy(isSatelliteOn = !it.map.isSatelliteOn)) }
     }
 
+    /** CH-114: balik mode ikuti kamera; dipakai tombol peta dan tombol kompas. */
+    fun toggleFollowCamera() {
+        _uiState.update { it.copy(map = it.map.copy(isFollowCameraOn = !it.map.isFollowCameraOn)) }
+    }
+
+    /**
+     * CH-111: toggle cepat — langsung mode kebalikan dari tema yang sedang terlihat,
+     * dipakai menu overflow di mana pun berada.
+     */
     fun toggleTheme() {
-        viewModelScope.launch { settings.setDarkTheme(!_uiState.value.settings.isDarkTheme) }
+        val next = if (_uiState.value.settings.isDarkTheme) ThemeMode.LIGHT else ThemeMode.DARK
+        viewModelScope.launch { settings.setThemeMode(next) }
+    }
+
+    /** CH-111: pilihan eksplisit dari layar Pengaturan, termasuk ikuti sistem. */
+    fun setThemeMode(mode: ThemeMode) {
+        viewModelScope.launch { settings.setThemeMode(mode) }
+    }
+
+    /** CH-113: alamat untuk titik yang ditekan lama; null bila gagal atau luring. */
+    fun resolveLongPressAddress(lat: Double, lon: Double) {
+        _uiState.update { it.copy(longPressAddress = null, isResolvingLongPress = true) }
+        viewModelScope.launch {
+            val place = searchRepo.reverseGeocode(lat, lon)
+            _uiState.update { it.copy(longPressAddress = place?.displayName, isResolvingLongPress = false) }
+        }
     }
 
     fun setDistanceUnit(unit: DistanceUnit) {

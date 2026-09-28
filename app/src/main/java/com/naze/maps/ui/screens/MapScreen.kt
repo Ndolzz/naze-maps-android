@@ -1,7 +1,9 @@
 package com.naze.maps.ui.screens
 
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,6 +22,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DirectionsBike
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,6 +31,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,9 +44,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.animation.core.tween
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -51,22 +55,113 @@ import com.naze.maps.history.HistoryEntity
 import com.naze.maps.location.PermissionUtils
 import com.naze.maps.map.MapLibreMapView
 import com.naze.maps.map.MapStyle
+import com.naze.maps.map.setSatelliteVisible
 import com.naze.maps.map.updateLocationDot
 import com.naze.maps.map.updateRouteLine
+import com.naze.maps.map.updateSelectedPlaceMarker
+import com.naze.maps.routing.OsrmRoute
 import com.naze.maps.routing.RoutingProfile
 import com.naze.maps.ui.components.CompassFab
+import com.naze.maps.ui.components.FollowCameraFab
 import com.naze.maps.ui.components.ErrorBanner
 import com.naze.maps.ui.components.LayersFab
 import com.naze.maps.ui.components.MapLoadingOverlay
 import com.naze.maps.ui.components.MyLocationFab
 import com.naze.maps.ui.components.NazeSearchBar
+import com.naze.maps.ui.components.SplashOverlay
+import com.naze.maps.utils.DistanceUtils
+import com.naze.maps.utils.DistanceUnit
 import com.naze.maps.utils.GeoPoint
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
-import com.naze.maps.map.setSatelliteVisible
+import java.util.Locale
+
+// CH-109: label mode untuk kartu ringkasan rute.
+private fun profileLabel(profile: RoutingProfile?): String = when (profile) {
+    RoutingProfile.DRIVING -> "Mobil"
+    RoutingProfile.WALKING -> "Jalan kaki"
+    RoutingProfile.CYCLING -> "Sepeda"
+    null -> "Rute"
+}
+
+// CH-109: ikon mode untuk kartu ringkasan rute.
+private fun profileIcon(profile: RoutingProfile?): ImageVector = when (profile) {
+    RoutingProfile.DRIVING -> Icons.Filled.DirectionsCar
+    RoutingProfile.WALKING -> Icons.Filled.DirectionsWalk
+    RoutingProfile.CYCLING -> Icons.Filled.DirectionsBike
+    null -> Icons.Filled.DirectionsCar
+}
+
+// CH-109: durasi OSRM menjadi teks menit, atau jam menit bila lebih dari satu jam.
+private fun formatDurationSeconds(seconds: Double): String {
+    val totalMinutes = (seconds / 60.0).toInt()
+    return if (totalMinutes < 60) {
+        totalMinutes.toString() + " menit"
+    } else {
+        val hours = totalMinutes / 60
+        val minutes = totalMinutes % 60
+        if (minutes == 0) hours.toString() + " jam" else hours.toString() + " jam " + minutes.toString() + " menit"
+    }
+}
+
+/**
+ * CH-109: kartu ringkasan rute aktif — ikon dan label mode, jarak sesuai satuan
+ * pengaturan, plus perkiraan waktu dari durationSeconds OSRM. Tombol tutup hanya
+ * menutup garis rute, pilihan tempat tetap ada.
+ */
+@Composable
+private fun RouteSummaryCard(
+    route: OsrmRoute,
+    profile: RoutingProfile?,
+    unit: DistanceUnit,
+    onClear: () -> Unit,
+) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = 6.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                profileIcon(profile),
+                contentDescription = profileLabel(profile),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Column {
+                Text(profileLabel(profile), style = MaterialTheme.typography.labelMedium)
+                Text(
+                    "Jarak " + DistanceUtils.format(route.distanceMeters / 1000.0, unit),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Text(
+                    "Sekitar " + formatDurationSeconds(route.durationSeconds),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            IconButton(onClick = onClear) {
+                Icon(Icons.Filled.Close, contentDescription = "Tutup ringkasan rute")
+            }
+        }
+    }
+}
+
+// CH-110: entri riwayat yang cocok dengan teks kueri (nama atau alamat, case insensitive).
+private fun historySuggestions(
+    history: List<HistoryEntity>,
+    query: String,
+): List<HistoryEntity> {
+    if (query.isBlank()) return history
+    return history.filter { entry ->
+        entry.name.contains(query, ignoreCase = true) ||
+            entry.address.contains(query, ignoreCase = true)
+    }
+}
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -78,6 +173,31 @@ fun MapScreen(modifier: Modifier = Modifier) {
 
     var maplibreMap by remember { mutableStateOf<MapLibreMap?>(null) }
     var mapStyle by remember { mutableStateOf<Style?>(null) }
+
+    // CH-102 (BUG-018): splash presentasi one-shot — sekali dismiss, tidak muncul lagi
+    // (tab switch / theme switch tidak memutar ulang splash).
+    var splashDismissed by remember { mutableStateOf(false) }
+
+    // CH-105: titik yang sedang ditekan lama di peta (kandidat favorit), atau null.
+    var longPressPoint by remember { mutableStateOf<LatLng?>(null) }
+
+    // CH-114: saat mode ikuti kamera aktif, bearing peta mengikuti arah kompas.
+    LaunchedEffect(state.location.headingDegrees, state.map.isFollowCameraOn) {
+        val heading = state.location.headingDegrees ?: return@LaunchedEffect
+        if (!state.map.isFollowCameraOn) return@LaunchedEffect
+        maplibreMap?.let { map ->
+            val pos = map.cameraPosition
+            map.moveCamera(
+                CameraUpdateFactory.newCameraPosition(
+                    CameraPosition.Builder()
+                        .target(pos.target)
+                        .bearing(heading.toDouble())
+                        .zoom(pos.zoom)
+                        .build()
+                )
+            )
+        }
+    }
 
     val permissionState = rememberMultiplePermissionsState(PermissionUtils.requiredPermissions.toList()) { results ->
         viewModel.onPermissionResult(results.values.any { it })
@@ -109,7 +229,7 @@ fun MapScreen(modifier: Modifier = Modifier) {
         )
     }
 
-    // Draw (or clear) the "my location" dot independently of camera tracking â it should show
+    // Draw (or clear) the "my location" dot independently of camera tracking — it should show
     // wherever we last heard from GPS, whether or not the camera is actively following it.
     LaunchedEffect(state.location.myLocation, mapStyle) {
         mapStyle?.updateLocationDot(state.location.myLocation?.latitude, state.location.myLocation?.longitude)
@@ -121,7 +241,16 @@ fun MapScreen(modifier: Modifier = Modifier) {
         mapStyle?.updateRouteLine(state.route.activeRoute)
     }
 
-    // Applies the satellite toggle to whichever Style instance is currently loaded â also
+    // CH-108 (follow up BUG-004): gambar penanda pada tempat terpilih agar tetap terlihat
+    // saat kamera digeser. Re-fire saat style reload (toggle tema).
+    LaunchedEffect(state.route.selectedPlace, mapStyle) {
+        mapStyle?.updateSelectedPlaceMarker(
+            state.route.selectedPlace?.latitude,
+            state.route.selectedPlace?.longitude,
+        )
+    }
+
+    // Applies the satellite toggle to whichever Style instance is currently loaded — also
     // re-fires after a style reload so the toggle survives a theme switch.
     LaunchedEffect(state.map.isSatelliteOn, mapStyle) {
         mapStyle?.setSatelliteVisible(state.map.isSatelliteOn)
@@ -133,6 +262,8 @@ fun MapScreen(modifier: Modifier = Modifier) {
             styleUrl = MapStyle.forTheme(state.settings.isDarkTheme),
             onMapReady = { map -> maplibreMap = map },
             onStyleLoaded = { style -> mapStyle = style },
+            // CH-105: tekan lama titik mana pun membuka sheet simpan favorit.
+            onMapLongClick = { point -> longPressPoint = point },
         )
 
         Column(
@@ -141,13 +272,18 @@ fun MapScreen(modifier: Modifier = Modifier) {
                 .systemBarsPadding()
                 .padding(16.dp),
         ) {
+            // CH-101: search bar reserves end space so it never runs under the
+            // top-end overflow menu overlay (menu = 40dp + 12dp margin).
             NazeSearchBar(
                 query = state.search.query,
                 onQueryChange = viewModel::onSearchQueryChange,
                 onClear = { viewModel.onSearchQueryChange("") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(end = 56.dp),
             )
 
+            // CH-110: saran dari riwayat — tampil saat kotak pencarian kosong maupun saat
+            // pengguna sedang mengetik, selama belum ada hasil Nominatim.
+            val suggestions = historySuggestions(history, state.search.query)
             if (state.search.results.isNotEmpty()) {
                 Surface(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -168,8 +304,9 @@ fun MapScreen(modifier: Modifier = Modifier) {
                         }
                     }
                 }
-            } else if (state.search.query.isBlank() && history.isNotEmpty()) {
-                // Riwayat lokasi â muncul saat kotak pencarian kosong, hilang begitu ada hasil pencarian.
+            } else if (suggestions.isNotEmpty()) {
+                // Riwayat / saran — entri yang pernah dicari diusulkan lebih dulu,
+                // hasil Nominatim menyusul setelah debounce.
                 Surface(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     shape = MaterialTheme.shapes.large,
@@ -181,11 +318,14 @@ fun MapScreen(modifier: Modifier = Modifier) {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("Riwayat lokasi", style = MaterialTheme.typography.labelLarge)
+                            Text(
+                                if (state.search.query.isBlank()) "Riwayat lokasi" else "Saran dari riwayat",
+                                style = MaterialTheme.typography.labelLarge,
+                            )
                             TextButton(onClick = viewModel::clearHistory) { Text("Hapus semua") }
                         }
                         LazyColumn(modifier = Modifier.heightIn(max = 260.dp)) {
-                            items(history, key = { it.id }) { entry: HistoryEntity ->
+                            items(suggestions, key = { it.id }) { entry: HistoryEntity ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -207,8 +347,24 @@ fun MapScreen(modifier: Modifier = Modifier) {
                                             }
                                         }
                                     }
-                                    IconButton(onClick = { viewModel.deleteHistoryEntry(entry) }) {
-                                        Icon(Icons.Filled.Close, contentDescription = "Hapus dari riwayat")
+                                    // CH-106: satu ketuk rute mobil + hapus per baris riwayat.
+                                    Row {
+                                        IconButton(onClick = {
+                                            viewModel.selectHistoryEntry(entry)
+                                            viewModel.requestRoute(
+                                                GeoPoint(entry.latitude, entry.longitude),
+                                                RoutingProfile.DRIVING,
+                                            )
+                                        }) {
+                                            Icon(
+                                                Icons.Filled.DirectionsCar,
+                                                contentDescription = "Rute ke sini",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                            )
+                                        }
+                                        IconButton(onClick = { viewModel.deleteHistoryEntry(entry) }) {
+                                            Icon(Icons.Filled.Close, contentDescription = "Hapus dari riwayat")
+                                        }
                                     }
                                 }
                             }
@@ -228,9 +384,18 @@ fun MapScreen(modifier: Modifier = Modifier) {
                     modifier = Modifier.align(Alignment.BottomEnd),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
+                    // CH-114: tombol mode ikuti kamera, hanya saat sensor arah tersedia.
+                    if (state.location.headingDegrees != null) {
+                        FollowCameraFab(
+                            isActive = state.map.isFollowCameraOn,
+                            onClick = viewModel::toggleFollowCamera,
+                        )
+                    }
                     CompassFab(
                         headingDegrees = state.location.headingDegrees,
                         onResetNorth = {
+                            // CH-114: reset utara juga mematikan mode ikuti kamera.
+                            if (state.map.isFollowCameraOn) viewModel.toggleFollowCamera()
                             maplibreMap?.let { map ->
                                 map.cameraPosition = CameraPosition.Builder()
                                     .target(map.cameraPosition.target)
@@ -258,14 +423,100 @@ fun MapScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        // Selalu di atas â biar buka app gak pernah nge-flash peta kosong/abu-abu sebelum
-        // style dan tile pertama kelar dimuat. Fade out mulus begitu peta siap.
+        // CH-109: kartu ringkasan rute aktif — mode, jarak, dan perkiraan waktu.
+        state.route.activeRoute?.let { route ->
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .systemBarsPadding()
+                    .padding(bottom = 16.dp),
+            ) {
+                RouteSummaryCard(
+                    route = route,
+                    profile = state.route.activeProfile,
+                    unit = state.settings.distanceUnit,
+                    onClear = viewModel::clearRoute,
+                )
+            }
+        }
+
+        // Map loading state (plain branded overlay) — kini hanya untuk reload style setelah
+        // splash one-shot selesai (splash menutup first load; keduanya tidak menumpuk).
         AnimatedVisibility(
-            visible = mapStyle == null,
+            visible = mapStyle == null && splashDismissed,
             exit = fadeOut(animationSpec = tween(durationMillis = 450)),
             modifier = Modifier.fillMaxSize(),
         ) {
             MapLoadingOverlay()
+        }
+
+        // CH-102 (BUG-018): brand splash "Map Comes Alive" — one-shot, readiness-driven.
+        // isReady = map style loaded (real initialization signal, bukan timer). Fade-out
+        // 450ms memberi transisi natural ke map; native SplashScreen API (system) tetap
+        // menangani cold-start instan sebelum Compose tergambar.
+        AnimatedVisibility(
+            visible = !splashDismissed,
+            exit = fadeOut(animationSpec = tween(durationMillis = 450)),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            SplashOverlay(
+                isReady = mapStyle != null,
+                onDismiss = { splashDismissed = true },
+            )
+        }
+
+        // CH-105: sheet simpan favorit untuk titik yang ditekan lama di peta.
+        longPressPoint?.let { point ->
+            // CH-113: minta alamat titik ini begitu sheet tekan lama terbuka.
+            LaunchedEffect(point) {
+                viewModel.resolveLongPressAddress(point.latitude, point.longitude)
+            }
+            ModalBottomSheet(onDismissRequest = { longPressPoint = null }) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text("Simpan lokasi ini", style = MaterialTheme.typography.titleMedium)
+                    // CH-113: nama tempat hasil reverse geocoding di atas koordinat.
+                    Text(
+                        if (state.isResolvingLongPress) "Menunggu alamat"
+                        else state.longPressAddress ?: "Alamat tidak ditemukan",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                    Text(
+                        String.format(Locale.US, "%.5f, %.5f", point.latitude, point.longitude),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                    var name by remember(point) { mutableStateOf("Lokasi tersimpan") }
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Nama lokasi") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            val coordinateText = String.format(Locale.US, "%.5f, %.5f", point.latitude, point.longitude)
+                            viewModel.saveFavorite(
+                                name.ifBlank { "Lokasi tersimpan" },
+                                coordinateText,
+                                point.latitude,
+                                point.longitude,
+                            )
+                            longPressPoint = null
+                            Toast.makeText(context, "Tersimpan di Favorit", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.padding(top = 12.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.Favorite,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 6.dp),
+                        )
+                        Text("Simpan ke Favorit")
+                    }
+                }
+            }
         }
 
         state.route.selectedPlace?.let { place ->
@@ -285,8 +536,7 @@ fun MapScreen(modifier: Modifier = Modifier) {
                                 GeoPoint(place.latitude, place.longitude),
                                 RoutingProfile.DRIVING,
                             )
-                        }) {
-                            Icon(
+                        }) {                            Icon(
                                 Icons.Filled.DirectionsCar,
                                 contentDescription = "Mobil",
                                 modifier = Modifier.padding(end = 6.dp),
@@ -321,26 +571,65 @@ fun MapScreen(modifier: Modifier = Modifier) {
                         }
                     }
                     // Catatan: OSRM demo server publik (router.project-osrm.org) kadang cuma
-                    // andal untuk profil mobil â kalau jalan kaki/sepeda gagal, banner
+                    // andal untuk profil mobil — kalau jalan kaki/sepeda gagal, banner
                     // "Rute tidak ditemukan" akan muncul otomatis lewat RouteOutcome di atas.
 
                     Row(
                         modifier = Modifier.padding(top = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        horizont
+alArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         OutlinedButton(onClick = {
                             viewModel.saveFavorite(place.mainText, place.subText, place.latitude, place.longitude)
                         }) { Text("Save") }
                         OutlinedButton(onClick = {
-                            val mapsUrl = "https://www.openstreetmap.org/?mlat=${place.latitude}&mlon=${place.longitude}" +
-                                "#map=17/${place.latitude}/${place.longitude}"
+                            val mapsUrl = "https://www.openstreetmap.org/?mlat=" + place.latitude + "&mlon=" + place.longitude +
+                                "#map=17/" + place.latitude + "/" + place.longitude
                             val sendIntent = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, "${place.mainText}\n$mapsUrl")
+                                putExtra(Intent.EXTRA_TEXT, place.mainText + "\n" + mapsUrl)
                             }
                             context.startActivity(Intent.createChooser(sendIntent, "Bagikan lokasi"))
                         }) {
                             Icon(Icons.Filled.Share, contentDescription = "Share")
+                        }
+                    }
+
+                    // CH-107: bagikan ringkasan rute aktif (jarak + waktu OSRM + tautan).
+                    state.route.activeRoute?.let { route ->
+                        OutlinedButton(
+                            onClick = {
+                                val routeKm = route.distanceMeters / 1000.0
+                                val minutes = (route.durationSeconds / 60.0).toInt()
+                                val distanceText = DistanceUtils.format(routeKm, state.settings.distanceUnit)
+                                val placeUrl = "https://www.openstreetmap.org/?mlat=" + place.latitude + "&mlon=" + place.longitude +
+                                    "#map=17/" + place.latitude + "/" + place.longitude
+                                val origin = state.location.myLocation
+                                val link = if (origin != null) {
+                                    "https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=" +
+                                        String.format(
+                                            Locale.US,
+                                            "%.6f,%.6f;%.6f,%.6f",
+                                            origin.latitude, origin.longitude, place.latitude, place.longitude,
+                                        )
+                                } else placeUrl
+                                val shareText = "Rute ke " + place.mainText + "\n" +
+                                    "Jarak " + distanceText + "\n" +
+                                    "Perkiraan waktu " + minutes + " menit" + "\n" + link
+                                val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                }
+                                context.startActivity(Intent.createChooser(sendIntent, "Bagikan rute"))
+                            },
+                            modifier = Modifier.padding(top = 10.dp),
+                        ) {
+                            Icon(
+                                Icons.Filled.Share,
+                                contentDescription = "Bagikan rute",
+                                modifier = Modifier.padding(end = 6.dp),
+                            )
+                            Text("Bagikan rute")
                         }
                     }
                 }

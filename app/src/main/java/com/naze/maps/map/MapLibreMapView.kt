@@ -11,6 +11,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
@@ -24,6 +25,10 @@ import org.maplibre.android.maps.Style
  * properly destroyed when the composable leaves composition (e.g. tab switch), not only when
  * the Activity is destroyed. A guard flag prevents double-destroy when both paths would fire.
  *
+ * CH-105: optional [onMapLongClick] is wired to MapLibreMap.addOnMapLongClickListener so the
+ * map can offer a press-and-hold affordance (save this point as a favorite). Null by default:
+ * existing callers are unaffected.
+ *
  * No globe/3D projection: MapLibre Native for Android doesn't implement it yet (web-only via
  * maplibre-gl-js). This renders a solid 2D vector map — no fake globe, per requirement #8's
  * own rule against claiming 360° when the engine is actually flat.
@@ -34,6 +39,7 @@ fun MapLibreMapView(
     styleUrl: String,
     onMapReady: (MapLibreMap) -> Unit,
     onStyleLoaded: (Style) -> Unit = {},
+    onMapLongClick: ((LatLng) -> Unit)? = null,
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val mapViewState = remember { mutableStateOf<MapView?>(null) }
@@ -48,6 +54,12 @@ fun MapLibreMapView(
                 mapViewState.value = this
                 getMapAsync { map ->
                     onMapReady(map)
+                    onMapLongClick?.let { handler ->
+                        map.addOnMapLongClickListener { point ->
+                            handler(point)
+                            true
+                        }
+                    }
                     map.setStyle(styleUrl) { style -> onStyleLoaded(style) }
                 }
             }
