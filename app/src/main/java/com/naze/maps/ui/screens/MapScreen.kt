@@ -1,7 +1,9 @@
 package com.naze.maps.ui.screens
 
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,13 +16,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DirectionsBike
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,6 +31,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -43,7 +46,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.animation.core.tween
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -52,6 +54,7 @@ import com.naze.maps.history.HistoryEntity
 import com.naze.maps.location.PermissionUtils
 import com.naze.maps.map.MapLibreMapView
 import com.naze.maps.map.MapStyle
+import com.naze.maps.map.setSatelliteVisible
 import com.naze.maps.map.updateLocationDot
 import com.naze.maps.map.updateRouteLine
 import com.naze.maps.routing.RoutingProfile
@@ -68,7 +71,7 @@ import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
-import com.naze.maps.map.setSatelliteVisible
+import java.util.Locale
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -84,6 +87,9 @@ fun MapScreen(modifier: Modifier = Modifier) {
     // CH-102 (BUG-018): splash presentasi one-shot — sekali dismiss, tidak muncul lagi
     // (tab switch / theme switch tidak memutar ulang splash).
     var splashDismissed by remember { mutableStateOf(false) }
+
+    // CH-105: titik yang sedang ditekan lama di peta (kandidat favorit), atau null.
+    var longPressPoint by remember { mutableStateOf<LatLng?>(null) }
 
     val permissionState = rememberMultiplePermissionsState(PermissionUtils.requiredPermissions.toList()) { results ->
         viewModel.onPermissionResult(results.values.any { it })
@@ -139,30 +145,9 @@ fun MapScreen(modifier: Modifier = Modifier) {
             styleUrl = MapStyle.forTheme(state.settings.isDarkTheme),
             onMapReady = { map -> maplibreMap = map },
             onStyleLoaded = { style -> mapStyle = style },
+            // CH-105: tekan lama titik mana pun membuka sheet simpan favorit.
+            onMapLongClick = { point -> longPressPoint = point },
         )
-
-        // CH-103 (BUG-019): kompas dipindah ke top-end, tepat di bawah tombol menu [⋮]
-        // (menu: statusBarsPadding + top 12dp + 40dp tinggi; jadi kompas mulai 60dp di bawah
-        // status bar, sejajar margin kanan menu). Tidak lagi menumpuk dengan kolom FAB kanan-bawah.
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .statusBarsPadding()
-                .padding(top = 60.dp, end = 12.dp),
-        ) {
-            CompassFab(
-                headingDegrees = state.location.headingDegrees,
-                onResetNorth = {
-                    maplibreMap?.let { map ->
-                        map.cameraPosition = CameraPosition.Builder()
-                            .target(map.cameraPosition.target)
-                            .bearing(0.0)
-                            .zoom(map.cameraPosition.zoom)
-                            .build()
-                    }
-                },
-            )
-        }
 
         Column(
             modifier = Modifier
@@ -259,6 +244,18 @@ fun MapScreen(modifier: Modifier = Modifier) {
                     modifier = Modifier.align(Alignment.BottomEnd),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
+                    CompassFab(
+                        headingDegrees = state.location.headingDegrees,
+                        onResetNorth = {
+                            maplibreMap?.let { map ->
+                                map.cameraPosition = CameraPosition.Builder()
+                                    .target(map.cameraPosition.target)
+                                    .bearing(0.0)
+                                    .zoom(map.cameraPosition.zoom)
+                                    .build()
+                            }
+                        },
+                    )
                     LayersFab(
                         isActive = state.map.isSatelliteOn,
                         onClick = viewModel::toggleSatellite,
@@ -277,9 +274,8 @@ fun MapScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        // Selalu di atas — biar buka app gak pernah nge-flash peta kosong/abu-abu sebelum
-        // style dan tile pertama kelar dimuat. Fade out mulus begitu peta siap.
-        // Kini hanya untuk reload style SETELAH splash one-shot selesai (tidak menumpuk).
+        // Map loading state (plain branded overlay) — kini hanya untuk reload style setelah
+        // splash one-shot selesai (splash menutup first load; keduanya tidak menumpuk).
         AnimatedVisibility(
             visible = mapStyle == null && splashDismissed,
             exit = fadeOut(animationSpec = tween(durationMillis = 450)),
@@ -289,7 +285,9 @@ fun MapScreen(modifier: Modifier = Modifier) {
         }
 
         // CH-102 (BUG-018): brand splash "Map Comes Alive" — one-shot, readiness-driven.
-        // isReady = map style loaded (real initialization signal, bukan timer).
+        // isReady = map style loaded (real initialization signal, bukan timer). Fade-out
+        // 450ms memberi transisi natural ke map; native SplashScreen API (system) tetap
+        // menangani cold-start instan sebelum Compose tergambar.
         AnimatedVisibility(
             visible = !splashDismissed,
             exit = fadeOut(animationSpec = tween(durationMillis = 450)),
@@ -299,6 +297,49 @@ fun MapScreen(modifier: Modifier = Modifier) {
                 isReady = mapStyle != null,
                 onDismiss = { splashDismissed = true },
             )
+        }
+
+        // CH-105: sheet simpan favorit untuk titik yang ditekan lama di peta.
+        longPressPoint?.let { point ->
+            ModalBottomSheet(onDismissRequest = { longPressPoint = null }) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text("Simpan lokasi ini", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        String.format(Locale.US, "%.5f, %.5f", point.latitude, point.longitude),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                    var name by remember(point) { mutableStateOf("Lokasi tersimpan") }
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Nama lokasi") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            val coordinateText = String.format(Locale.US, "%.5f, %.5f", point.latitude, point.longitude)
+                            viewModel.saveFavorite(
+                                name.ifBlank { "Lokasi tersimpan" },
+                                coordinateText,
+                                point.latitude,
+                                point.longitude,
+                            )
+                            longPressPoint = null
+                            Toast.makeText(context, "Tersimpan di Favorit", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.padding(top = 12.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.Favorite,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 6.dp),
+                        )
+                        Text("Simpan ke Favorit")
+                    }
+                }
+            }
         }
 
         state.route.selectedPlace?.let { place ->
@@ -365,11 +406,12 @@ fun MapScreen(modifier: Modifier = Modifier) {
                             viewModel.saveFavorite(place.mainText, place.subText, place.latitude, place.longitude)
                         }) { Text("Save") }
                         OutlinedButton(onClick = {
-                            val mapsUrl = "https://www.openstreetmap.org/?mlat=${place.latitude}&mlon=${place.longitude}" +
-                                "#map=17/${place.latitude}/${place.longitude}"
+                            val mapsUrl = "https://www.openstreetmap.org/?mlat=" + place.latitude + "&mlon=" + place.longitude +
+                                "#map=17/" + place.latitude + "/" + place.longitude
                             val sendIntent = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, "${place.mainText}\n$mapsUrl")
+                                putExtra(Intent.EXTRA_TEXT, place.mainText + "
+" + mapsUrl)
                             }
                             context.startActivity(Intent.createChooser(sendIntent, "Bagikan lokasi"))
                         }) {
