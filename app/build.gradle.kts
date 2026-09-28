@@ -46,6 +46,13 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    // Robolectric (MapViewModel unit tests — SDD TASK-010b) needs the real manifest/resources.
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 dependencies {
@@ -97,4 +104,9 @@ dependencies {
     // Unit testing (characterization tests — SDD TASK-003)
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+
+    // VM unit tests (SDD TASK-010b): Robolectric provides the Application for AndroidViewModel
+    testImplementation("org.robolectric:robolectric:4.13")
+    testImplementation("androidx.test:core-ktx:1.6.1")
+    testImplementation("androidx.test.ext:junit:1.2.1")
 }
