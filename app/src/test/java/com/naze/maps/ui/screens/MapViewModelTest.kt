@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.naze.maps.data.SettingsDataStore
+import com.naze.maps.data.ThemeMode
 import com.naze.maps.favorites.FavoriteEntity
 import com.naze.maps.favorites.FavoritesRepository
 import com.naze.maps.history.HistoryEntity
@@ -47,6 +48,7 @@ import org.robolectric.annotation.Config
  * manifest's NazeMapsApp calls MapLibre.getInstance() in onCreate, and MapLibre's
  * native library cannot load on the JVM (UnsatisfiedLinkError).
  */
+
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [34], application = Application::class)
 class MapViewModelTest {
@@ -111,12 +113,16 @@ class MapViewModelTest {
         }
     }
 
+    // BUG-022: FakeSettingsDataStore must implement the CH-111 themeMode members.
     private class FakeSettingsDataStore : SettingsDataStore {
         val darkTheme = MutableStateFlow(true)
+        val mode = MutableStateFlow(ThemeMode.DARK)
         val unit = MutableStateFlow(DistanceUnit.KM)
         override val isDarkTheme: Flow<Boolean> = darkTheme
+        override val themeMode: Flow<ThemeMode> = mode
         override val distanceUnit: Flow<DistanceUnit> = unit
         override suspend fun setDarkTheme(enabled: Boolean) { darkTheme.value = enabled }
+        override suspend fun setThemeMode(mode: ThemeMode) { this.mode.value = mode }
         override suspend fun setDistanceUnit(unit: DistanceUnit) { this.unit.value = unit }
     }
 
@@ -311,16 +317,36 @@ class MapViewModelTest {
         assertFalse(vm.uiState.value.map.isSatelliteOn)
     }
 
+    // BUG-022: toggleTheme now writes ThemeMode (CH-111), not the legacy dark_theme flag.
     @Test
-    fun `toggleTheme persists via SettingsDataStore and updates the settings slice`() {
+    fun `toggleTheme persists the opposite mode and updates the settings slice`() {
         val vm = createVm()
         advance()
-        assertTrue(vm.uiState.value.settings.isDarkTheme) // fake default
+        assertTrue(vm.uiState.value.settings.isDarkTheme) // fake default mode is DARK
 
         vm.toggleTheme()
         advance()
+        assertEquals(ThemeMode.LIGHT, settings.mode.value)
+        assertEquals(ThemeMode.LIGHT, vm.uiState.value.settings.themeMode)
         assertFalse(vm.uiState.value.settings.isDarkTheme)
-        assertFalse(settings.darkTheme.value)
+    }
+
+    // BUG-022: CH-111 regression test for the explicit theme picker.
+    @Test
+    fun `setThemeMode persists and isDarkTheme follows LIGHT and DARK`() {
+        val vm = createVm()
+        advance()
+        assertTrue(vm.uiState.value.settings.isDarkTheme) // default DARK
+
+        vm.setThemeMode(ThemeMode.LIGHT)
+        advance()
+        assertEquals(ThemeMode.LIGHT, settings.mode.value)
+        assertFalse(vm.uiState.value.settings.isDarkTheme)
+
+        vm.setThemeMode(ThemeMode.DARK)
+        advance()
+        assertEquals(ThemeMode.DARK, settings.mode.value)
+        assertTrue(vm.uiState.value.settings.isDarkTheme)
     }
 
     @Test
