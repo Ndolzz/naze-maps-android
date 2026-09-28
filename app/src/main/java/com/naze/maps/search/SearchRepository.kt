@@ -2,6 +2,7 @@ package com.naze.maps.search
 
 import com.naze.maps.network.NetworkModule
 import java.io.IOException
+import java.util.Locale
 
 sealed class SearchOutcome {
     data class Success(val results: List<NominatimResult>) : SearchOutcome()
@@ -22,7 +23,7 @@ class SearchRepositoryImpl(
     override suspend fun search(query: String): SearchOutcome {
         if (query.isBlank()) return SearchOutcome.Empty
         return try {
-            val results = api.search(query)
+            val results = api.search(query, acceptLanguage = Locale.getDefault().toLanguageTag())
             if (results.isEmpty()) SearchOutcome.Empty else SearchOutcome.Success(results)
         } catch (e: IOException) {
             SearchOutcome.NoInternet

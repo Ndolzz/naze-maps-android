@@ -185,7 +185,7 @@ class MapViewModel @JvmOverloads constructor(
         }
         searchJob = viewModelScope.launch {
             _uiState.update { it.copy(search = it.search.copy(isSearching = true)) }
-            kotlinx.coroutines.delay(350) // light debounce so we don't hit Nominatim on every keystroke
+            kotlinx.coroutines.delay(500) // TASK-011: debounce >= 500ms sesuai policy penggunaan Nominatim
             when (val outcome = searchRepo.search(query)) {
                 is SearchOutcome.Success -> _uiState.update {
                     it.copy(search = it.search.copy(results = outcome.results, isSearching = false), banner = null)
@@ -238,7 +238,7 @@ class MapViewModel @JvmOverloads constructor(
         val from = _uiState.value.location.myLocation
         if (from == null) {
             _uiState.update {
-                it.copy(banner = MapBanner.Generic("Lokasi saya belum tersedia â aktifkan My Location dulu"))
+                it.copy(banner = MapBanner.Generic("Lokasi saya belum tersedia — aktifkan My Location dulu"))
             }
             return
         }

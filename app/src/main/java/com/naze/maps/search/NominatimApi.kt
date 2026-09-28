@@ -10,6 +10,7 @@ interface NominatimApi {
         @Query("format") format: String = "json",
         @Query("addressdetails") addressDetails: Int = 1,
         @Query("limit") limit: Int = 8,
+        @Query("accept-language") acceptLanguage: String = "id",
     ): List<NominatimResult>
 
     companion object {
