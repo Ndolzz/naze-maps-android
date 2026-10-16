@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.naze.maps.emblems.PixelEmblems
 
 @Composable
 fun MyLocationFab(isActive: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -59,6 +60,42 @@ fun CompassFab(headingDegrees: Float?, onResetNorth: () -> Unit, modifier: Modif
             Icons.Filled.Explore,
             contentDescription = "Reset arah ke utara",
             modifier = Modifier.rotate(animatedRotation),
+        )
+    }
+}
+
+/**
+ * WMAP-R5 (AC5.3): toggle graticule — garis lintang/bujur, ekuator, dan meridian utama.
+ * Saat aktif, emblem digambar mono putih agar kontras dengan latar biru primary.
+ */
+@Composable
+fun GraticuleFab(isActive: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    FloatingActionButton(
+        onClick = onClick,
+        modifier = modifier.size(48.dp),
+        containerColor = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+        contentColor = if (isActive) Color.White else MaterialTheme.colorScheme.onSurface,
+    ) {
+        PixelEmblemIcon(
+            emblem = PixelEmblems.GRATICULE,
+            contentDescription = "Garis koordinat (graticule)",
+            monoColor = if (isActive) Color.White else null,
+        )
+    }
+}
+
+/** WMAP-R1: membuka legenda bioma + kategori landmark. */
+@Composable
+fun LegendFab(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    FloatingActionButton(
+        onClick = onClick,
+        modifier = modifier.size(48.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) {
+        PixelEmblemIcon(
+            emblem = PixelEmblems.FOREST,
+            contentDescription = "Legenda peta dunia",
         )
     }
 }
