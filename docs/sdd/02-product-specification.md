@@ -2,11 +2,11 @@
 
 - ID: SDD-020
 - Title: Product Specification
-- Status: APPROVED (mendeskripsikan kondisi NYATA saat ini, bukan aspirasi)
+- Status: APPROVED (mendeskripsikan kondisi NYATA saat ini, bukan aspirasi; update 2026-10-16: redesain FEAT-WMAP)
 
 ## Tujuan
 
-Aplikasi peta Android gratis & terbuka: peta, pencarian tempat, rute, pengukur jarak — tanpa API key berbayar. Porting dari PWA Naze Maps dengan tambahan persistensi asli (Room).
+Aplikasi peta Android gratis & terbuka: peta, pencarian tempat, rute, pengukur jarak — tanpa API key berbayar. Porting dari PWA Naze Maps dengan tambahan persistensi asli (Room). Sejak 2026-10-16: peta utama berstyle pixel-art RPG world map (FEAT-WMAP).
 
 ## Target Pengguna
 
@@ -25,6 +25,9 @@ Aplikasi peta Android gratis & terbuka: peta, pencarian tempat, rute, pengukur j
 9. Settings: tema, satuan jarak
 10. Satellite toggle (Esri raster)
 11. Error banner: GPS off, permission denied, no internet, generic
+12. [WMAP] Pixel-art RPG world map: bioma, style light/dark kustom (FEAT-WMAP R1)
+13. [WMAP] Landmark discovery: 6 landmark dunia terkurasi, tier prominence, clustering, panel info + aksi (FEAT-WMAP R2)
+14. [WMAP] Floating dock collapsible + graticule adaptif (FEAT-WMAP R4/R5)
 
 ## Non-Goals (saat ini)
 
@@ -33,14 +36,17 @@ Aplikasi peta Android gratis & terbuka: peta, pencarian tempat, rute, pengukur j
 - Offline map/tiles/cache
 - Akun user, sync cloud
 - Background location / foreground service navigation
-- Reverse geocoding, POI categories
+- Reverse geocoding; POI kategori generik / nearby search
+  (PENGECUALIAN TERKURASI: dataset 6 landmark dunia — disetujui via ADR-006/FEAT-WMAP)
 - Multi-bahasa (string campur EN/ID saat ini)
+- Kontur elevasi (data elevasi tidak tersedia di OpenFreeMap/OpenMapTiles — ADR-006)
 
 ## Feature Boundaries
 
-- Routing hanya dari "lokasi saya" (myLocation) ke satu destinasi; bukan multi-waypoint, bukan from arbitrary point (CONFIRMED MapViewModel.requestRoute).
+- Routing hanya dari "lokasi saya" (myLocation) ke satu destinasi; bukan multi-waypoint, bukan from arbitrary point (CONFIRMED MapViewModel.requestRoute). Rute ke landmark mengikuti batas yang sama.
 - Search hanya text query; tidak ada kategori/nearby.
-- Favorites hanya point (lat/lng + nama); tidak ada folder/route.
+- Favorites hanya point (lat/lng + nama); tidak ada folder/route. Landmark dapat disimpan sebagai favorit point.
+- Landmark = dataset terkurasi statis (6 entri, koordinat terverifikasi); bukan layer POI dinamis.
 
 ## Platform Assumptions
 
@@ -48,7 +54,7 @@ Aplikasi peta Android gratis & terbuka: peta, pencarian tempat, rute, pengukur j
 
 ## Offline/Online Behavior
 
-- Peta, search, routing butuh internet; tidak ada cache offline. Banner "no internet" hanya muncul reaktif saat search/route gagal (CONFIRMED; ConnectivityObserver belum terpakai).
+- Peta, search, routing butuh internet; tidak ada cache offline. Banner "no internet" proaktif via ConnectivityObserver (TASK-006). Dataset landmark & emblem dibundel (offline), sprite hanya tampil bila peta termuat.
 
 ## Permission Requirements
 
@@ -56,8 +62,8 @@ Aplikasi peta Android gratis & terbuka: peta, pencarian tempat, rute, pengukur j
 
 ## External Service Dependencies (semua gratis, keyless — CONFIRMED)
 
-- OpenFreeMap tiles (style liberty/dark)
-- Nominatim (search; wajib User-Agent deskriptif — sudah ada)
-- OSRM demo server router.project-osrm.org (routing; README mencatat profil non-mobil kadang tidak andal)
+- OpenFreeMap tiles + glyphs (style pixel-art kustom dibundel di app, tiles & font Noto Sans dari OpenFreeMap)
+- Nominatim (search; wajib User-Agent deskriptif — sudah ada; accept-language — TASK-011)
+- OSRM demo server router.project-osrm.org (routing; profil non-mobil kadang tidak andal)
 - Esri World Imagery raster (satellite)
 - Konsekuensi: ketersediaan & rate limit pihak ketiga di luar kendali; belum ada fallback.
