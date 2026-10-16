@@ -3,12 +3,15 @@ package com.naze.maps.map
 import android.content.Context
 
 /**
- * Style sources for the map (WMAP-R1, ADR-006 #1/#2).
+ * Style source for the map (WMAP-R1, ADR-006 #1/#2).
  *
  * The pixel-art redesign renders from style JSON bundled in the app assets (per
  * OpenFreeMap guidance, customized styles must be self-hosted — bundling them in the
  * app is the self-hosting form). Tiles and glyphs still come from OpenFreeMap,
  * keyless and free.
+ *
+ * The legacy remote style URLs (liberty/dark) were removed when WMAP-T6 switched
+ * MapScreen over to the bundled pixel styles.
  */
 object MapStyle {
 
@@ -29,11 +32,4 @@ object MapStyle {
         val asset = pixelAssetForTheme(isDark)
         return context.assets.open(asset).use { stream -> stream.readBytes().decodeToString() }
     }
-
-    // Legacy remote styles — still referenced by MapScreen until the WMAP-T6 commit
-    // switches it to the pixel styles.
-    const val LIGHT = "https://tiles.openfreemap.org/styles/liberty"
-    const val DARK = "https://tiles.openfreemap.org/styles/dark"
-
-    fun forTheme(isDark: Boolean): String = if (isDark) DARK else LIGHT
 }
