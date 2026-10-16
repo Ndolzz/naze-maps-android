@@ -8,6 +8,10 @@ import com.naze.maps.favorites.FavoriteEntity
 import com.naze.maps.favorites.FavoritesRepository
 import com.naze.maps.history.HistoryEntity
 import com.naze.maps.history.HistoryRepository
+import com.naze.maps.landmarks.Landmark
+import com.naze.maps.landmarks.LandmarkCategory
+import com.naze.maps.landmarks.LandmarkRepository
+import com.naze.maps.landmarks.ProminenceTier
 import com.naze.maps.location.CompassRepository
 import com.naze.maps.location.LocationRepository
 import com.naze.maps.location.NazeLocation
@@ -31,6 +35,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -126,6 +131,22 @@ class MapViewModelTest {
         override fun observe(): Flow<Boolean> = online
     }
 
+    /** WMAP-R2: fake landmark dataset — MapViewModel must expose it as-is. */
+    private class FakeLandmarkRepository : LandmarkRepository {
+        override val landmarks = listOf(
+            Landmark(
+                id = "test-temple",
+                name = "Test Temple",
+                country = "Testland",
+                category = LandmarkCategory.TEMPLE,
+                latitude = -7.6079,
+                longitude = 110.2038,
+                tier = ProminenceTier.REGION,
+                description = "fixture",
+            ),
+        )
+    }
+
     // ---- Setup ----
 
     private val locationRepo = FakeLocationRepository()
@@ -136,6 +157,7 @@ class MapViewModelTest {
     private val historyRepo = FakeHistoryRepository()
     private val settings = FakeSettingsDataStore()
     private val connectivity = FakeConnectivityObserver()
+    private val landmarkRepo = FakeLandmarkRepository()
 
     @Before
     fun setUp() {
@@ -157,6 +179,7 @@ class MapViewModelTest {
         historyRepo,
         settings,
         connectivity,
+        landmarkRepo,
     )
 
     private fun advance() {
@@ -332,5 +355,60 @@ class MapViewModelTest {
         vm.setDistanceUnit(DistanceUnit.MI)
         advance()
         assertEquals(DistanceUnit.MI, vm.uiState.value.settings.distanceUnit)
+    }
+
+    // ---- WMAP tests (WMAP-T6) ----
+
+    @Test
+    fun `landmarks are exposed from the injected landmark repository`() {
+        val vm = createVm()
+        advance()
+
+        assertEquals(1, vm.landmarks.size)
+        assertEquals("test-temple", vm.landmarks.first().id)
+    }
+
+    @Test
+    fun `selectLandmark selects the landmark and clears search results`() {
+        searchRepo.outcome = SearchOutcome.Success(listOf(place))
+        val vm = createVm()
+        advance()
+
+        vm.onSearchQueryChange("monas")
+        testDispatcher.scheduler.advanceTimeBy(500)
+        advance()
+        assertFalse(vm.uiState.value.search.results.isEmpty())
+
+        vm.selectLandmark(vm.landmarks.first())
+        advance()
+
+        val state = vm.uiState.value
+        assertEquals("test-temple", state.landmark.selected?.id)
+        assertTrue(state.search.results.isEmpty())
+        assertEquals("", state.search.query)
+    }
+
+    @Test
+    fun `clearLandmarkSelection clears the selected landmark`() {
+        val vm = createVm()
+        advance()
+
+        vm.selectLandmark(vm.landmarks.first())
+        assertNotNull(vm.uiState.value.landmark.selected)
+
+        vm.clearLandmarkSelection()
+        assertNull(vm.uiState.value.landmark.selected)
+    }
+
+    @Test
+    fun `toggleGraticule flips the graticule flag in the map slice`() {
+        val vm = createVm()
+        advance()
+
+        assertFalse(vm.uiState.value.map.isGraticuleOn)
+        vm.toggleGraticule()
+        assertTrue(vm.uiState.value.map.isGraticuleOn)
+        vm.toggleGraticule()
+        assertFalse(vm.uiState.value.map.isGraticuleOn)
     }
 }
