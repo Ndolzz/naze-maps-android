@@ -27,11 +27,17 @@ import org.maplibre.android.maps.Style
  * No globe/3D projection: MapLibre Native for Android doesn't implement it yet (web-only via
  * maplibre-gl-js). This renders a solid 2D vector map — no fake globe, per requirement #8's
  * own rule against claiming 360° when the engine is actually flat.
+ *
+ * WMAP-R1 (ADR-006): the style is now a pixel-art JSON document bundled in the app assets,
+ * applied via Style.Builder().fromJson. [styleKey] gives the style an identity the JSON body
+ * cannot provide (it cannot be read back from the map), so a theme switch re-applies the
+ * style exactly once instead of on every recomposition.
  */
 @Composable
 fun MapLibreMapView(
     modifier: Modifier = Modifier,
-    styleUrl: String,
+    styleJson: String,
+    styleKey: String,
     onMapReady: (MapLibreMap) -> Unit,
     onStyleLoaded: (Style) -> Unit = {},
 ) {
@@ -39,6 +45,8 @@ fun MapLibreMapView(
     val mapViewState = remember { mutableStateOf<MapView?>(null) }
     // Guards against calling onDestroy() twice (Activity destroy + composition dispose).
     val destroyed = remember { mutableStateOf(false) }
+    // Guards against re-applying the same style on every recomposition.
+    val appliedKey = remember { mutableStateOf<String?>(null) }
 
     AndroidView(
         modifier = modifier.fillMaxSize(),
@@ -48,14 +56,22 @@ fun MapLibreMapView(
                 mapViewState.value = this
                 getMapAsync { map ->
                     onMapReady(map)
-                    map.setStyle(styleUrl) { style -> onStyleLoaded(style) }
+                    map.setStyle(Style.Builder().fromJson(styleJson)) { style ->
+                        appliedKey.value = styleKey
+                        onStyleLoaded(style)
+                    }
                 }
             }
         },
         update = { view ->
-            view.getMapAsync { map ->
-                if (map.style?.uri != styleUrl) {
-                    map.setStyle(styleUrl) { style -> onStyleLoaded(style) }
+            if (appliedKey.value != styleKey) {
+                view.getMapAsync { map ->
+                    if (appliedKey.value != styleKey) {
+                        map.setStyle(Style.Builder().fromJson(styleJson)) { style ->
+                            appliedKey.value = styleKey
+                            onStyleLoaded(style)
+                        }
+                    }
                 }
             }
         },

@@ -1,0 +1,552 @@
+{
+ "version": 8,
+ "name": "Naze Pixel Light",
+ "glyphs": "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
+ "sources": {
+  "openmaptiles": {
+   "type": "vector",
+   "url": "https://tiles.openfreemap.org/planet"
+  }
+ },
+ "layers": [
+  {
+   "id": "background",
+   "type": "background",
+   "paint": {
+    "background-color": "#E8EFD9"
+   }
+  },
+  {
+   "id": "water",
+   "type": "fill",
+   "source": "openmaptiles",
+   "source-layer": "water",
+   "filter": [
+    "!=",
+    [
+     "get",
+     "brunnel"
+    ],
+    "tunnel"
+   ],
+   "paint": {
+    "fill-color": [
+     "match",
+     [
+      "get",
+      "class"
+     ],
+     "ocean",
+     "#3E97D1",
+     "#63B7E6"
+    ]
+   }
+  },
+  {
+   "id": "landcover-biomes",
+   "type": "fill",
+   "source": "openmaptiles",
+   "source-layer": "landcover",
+   "paint": {
+    "fill-color": [
+     "match",
+     [
+      "get",
+      "class"
+     ],
+     "wood",
+     "#6FAF5C",
+     "grass",
+     "#9CCB7A",
+     "farmland",
+     "#E5D68C",
+     "farm",
+     "#E5D68C",
+     "orchard",
+     "#E5D68C",
+     "vineyard",
+     "#E5D68C",
+     "sand",
+     "#F1E2A4",
+     "ice",
+     "#E8F5FD",
+     "wetland",
+     "#71B389",
+     "rock",
+     "#B5ADA0",
+     "bare_rock",
+     "#B5ADA0",
+     "fell",
+     "#B5ADA0",
+     "scree",
+     "#B5ADA0",
+     "rgba(0,0,0,0)"
+    ]
+   }
+  },
+  {
+   "id": "landuse-areas",
+   "type": "fill",
+   "source": "openmaptiles",
+   "source-layer": "landuse",
+   "minzoom": 6,
+   "paint": {
+    "fill-color": [
+     "match",
+     [
+      "get",
+      "class"
+     ],
+     "residential",
+     "#E4E0C9",
+     "suburban",
+     "#E4E0C9",
+     "industrial",
+     "#E4E0C9",
+     "commercial",
+     "#E4E0C9",
+     "cemetery",
+     "#AFC2A4",
+     "pitch",
+     "#82C46C",
+     "sports_centre",
+     "#82C46C",
+     "rgba(0,0,0,0)"
+    ]
+   }
+  },
+  {
+   "id": "waterway-rivers",
+   "type": "line",
+   "source": "openmaptiles",
+   "source-layer": "waterway",
+   "minzoom": 6,
+   "layout": {
+    "line-cap": "butt",
+    "line-join": "miter"
+   },
+   "paint": {
+    "line-color": "#4FA8DC",
+    "line-width": [
+     "interpolate",
+     [
+      "linear"
+     ],
+     [
+      "zoom"
+     ],
+     6,
+     0.5,
+     12,
+     1.5,
+     18,
+     3
+    ]
+   }
+  },
+  {
+   "id": "boundary-country",
+   "type": "line",
+   "source": "openmaptiles",
+   "source-layer": "boundary",
+   "filter": [
+    "==",
+    [
+     "get",
+     "admin_level"
+    ],
+    2
+   ],
+   "layout": {
+    "line-cap": "butt"
+   },
+   "paint": {
+    "line-color": "#46617A",
+    "line-width": 0.8,
+    "line-dasharray": [
+     3,
+     2
+    ]
+   }
+  },
+  {
+   "id": "road-path",
+   "type": "line",
+   "source": "openmaptiles",
+   "source-layer": "transportation",
+   "minzoom": 12,
+   "filter": [
+    "match",
+    [
+     "get",
+     "class"
+    ],
+    [
+     "path",
+     "pedestrian",
+     "footway",
+     "track"
+    ],
+    true,
+    false
+   ],
+   "layout": {
+    "line-cap": "butt",
+    "line-join": "miter"
+   },
+   "paint": {
+    "line-color": "#C9C4A9",
+    "line-width": [
+     "interpolate",
+     [
+      "linear"
+     ],
+     [
+      "zoom"
+     ],
+     12,
+     0.7,
+     18,
+     1.5
+    ]
+   }
+  },
+  {
+   "id": "road-minor",
+   "type": "line",
+   "source": "openmaptiles",
+   "source-layer": "transportation",
+   "minzoom": 10,
+   "filter": [
+    "match",
+    [
+     "get",
+     "class"
+    ],
+    [
+     "minor",
+     "service",
+     "residential"
+    ],
+    true,
+    false
+   ],
+   "layout": {
+    "line-cap": "butt",
+    "line-join": "miter"
+   },
+   "paint": {
+    "line-color": "#FFFFFF",
+    "line-width": [
+     "interpolate",
+     [
+      "linear"
+     ],
+     [
+      "zoom"
+     ],
+     10,
+     0.7,
+     18,
+     2
+    ]
+   }
+  },
+  {
+   "id": "road-secondary",
+   "type": "line",
+   "source": "openmaptiles",
+   "source-layer": "transportation",
+   "minzoom": 9,
+   "filter": [
+    "match",
+    [
+     "get",
+     "class"
+    ],
+    [
+     "secondary",
+     "tertiary"
+    ],
+    true,
+    false
+   ],
+   "layout": {
+    "line-cap": "butt",
+    "line-join": "miter"
+   },
+   "paint": {
+    "line-color": "#F7E7A1",
+    "line-width": [
+     "interpolate",
+     [
+      "linear"
+     ],
+     [
+      "zoom"
+     ],
+     9,
+     1,
+     18,
+     2.5
+    ]
+   }
+  },
+  {
+   "id": "road-primary",
+   "type": "line",
+   "source": "openmaptiles",
+   "source-layer": "transportation",
+   "minzoom": 7,
+   "filter": [
+    "match",
+    [
+     "get",
+     "class"
+    ],
+    [
+     "trunk",
+     "primary"
+    ],
+    true,
+    false
+   ],
+   "layout": {
+    "line-cap": "butt",
+    "line-join": "miter"
+   },
+   "paint": {
+    "line-color": "#F2D06B",
+    "line-width": [
+     "interpolate",
+     [
+      "linear"
+     ],
+     [
+      "zoom"
+     ],
+     7,
+     1,
+     18,
+     3
+    ]
+   }
+  },
+  {
+   "id": "road-motorway",
+   "type": "line",
+   "source": "openmaptiles",
+   "source-layer": "transportation",
+   "minzoom": 6,
+   "filter": [
+    "match",
+    [
+     "get",
+     "class"
+    ],
+    [
+     "motorway"
+    ],
+    true,
+    false
+   ],
+   "layout": {
+    "line-cap": "butt",
+    "line-join": "miter"
+   },
+   "paint": {
+    "line-color": "#E8A33D",
+    "line-width": [
+     "interpolate",
+     [
+      "linear"
+     ],
+     [
+      "zoom"
+     ],
+     6,
+     1.4,
+     18,
+     3.5
+    ]
+   }
+  },
+  {
+   "id": "buildings",
+   "type": "fill",
+   "source": "openmaptiles",
+   "source-layer": "building",
+   "minzoom": 13.5,
+   "paint": {
+    "fill-color": "#CFC6B2"
+   }
+  },
+  {
+   "id": "place-continent",
+   "type": "symbol",
+   "source": "openmaptiles",
+   "source-layer": "place",
+   "minzoom": 1,
+   "filter": [
+    "match",
+    [
+     "get",
+     "class"
+    ],
+    [
+     "continent"
+    ],
+    true,
+    false
+   ],
+   "layout": {
+    "text-field": "{name}",
+    "text-font": [
+     "Noto Sans Regular"
+    ],
+    "text-size": 13,
+    "text-max-width": 8,
+    "text-transform": "uppercase",
+    "text-letter-spacing": 0.25
+   },
+   "paint": {
+    "text-color": "#334C63",
+    "text-halo-color": "rgba(255,255,255,0.8)",
+    "text-halo-width": 1.2
+   }
+  },
+  {
+   "id": "place-country",
+   "type": "symbol",
+   "source": "openmaptiles",
+   "source-layer": "place",
+   "minzoom": 3,
+   "filter": [
+    "match",
+    [
+     "get",
+     "class"
+    ],
+    [
+     "country"
+    ],
+    true,
+    false
+   ],
+   "layout": {
+    "text-field": "{name}",
+    "text-font": [
+     "Noto Sans Regular"
+    ],
+    "text-size": 11.5,
+    "text-max-width": 8,
+    "text-transform": "uppercase",
+    "text-letter-spacing": 0.08
+   },
+   "paint": {
+    "text-color": "#334C63",
+    "text-halo-color": "rgba(255,255,255,0.8)",
+    "text-halo-width": 1.2
+   }
+  },
+  {
+   "id": "place-city",
+   "type": "symbol",
+   "source": "openmaptiles",
+   "source-layer": "place",
+   "minzoom": 5,
+   "filter": [
+    "match",
+    [
+     "get",
+     "class"
+    ],
+    [
+     "city"
+    ],
+    true,
+    false
+   ],
+   "layout": {
+    "text-field": "{name}",
+    "text-font": [
+     "Noto Sans Regular"
+    ],
+    "text-size": 10.5,
+    "text-max-width": 8
+   },
+   "paint": {
+    "text-color": "#2C4A66",
+    "text-halo-color": "rgba(255,255,255,0.8)",
+    "text-halo-width": 1.2
+   }
+  },
+  {
+   "id": "place-town",
+   "type": "symbol",
+   "source": "openmaptiles",
+   "source-layer": "place",
+   "minzoom": 7.5,
+   "filter": [
+    "match",
+    [
+     "get",
+     "class"
+    ],
+    [
+     "town"
+    ],
+    true,
+    false
+   ],
+   "layout": {
+    "text-field": "{name}",
+    "text-font": [
+     "Noto Sans Regular"
+    ],
+    "text-size": 10,
+    "text-max-width": 8
+   },
+   "paint": {
+    "text-color": "#2C4A66",
+    "text-halo-color": "rgba(255,255,255,0.8)",
+    "text-halo-width": 1.2
+   }
+  },
+  {
+   "id": "place-village",
+   "type": "symbol",
+   "source": "openmaptiles",
+   "source-layer": "place",
+   "minzoom": 11,
+   "filter": [
+    "match",
+    [
+     "get",
+     "class"
+    ],
+    [
+     "village",
+     "hamlet",
+     "suburb",
+     "neighbourhood"
+    ],
+    true,
+    false
+   ],
+   "layout": {
+    "text-field": "{name}",
+    "text-font": [
+     "Noto Sans Regular"
+    ],
+    "text-size": 9,
+    "text-max-width": 8
+   },
+   "paint": {
+    "text-color": "#2C4A66",
+    "text-halo-color": "rgba(255,255,255,0.8)",
+    "text-halo-width": 1.2
+   }
+  }
+ ]
+}

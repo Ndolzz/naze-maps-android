@@ -10,6 +10,9 @@ import com.naze.maps.favorites.FavoritesRepositoryImpl
 import com.naze.maps.history.HistoryEntity
 import com.naze.maps.history.HistoryRepository
 import com.naze.maps.history.HistoryRepositoryImpl
+import com.naze.maps.landmarks.Landmark
+import com.naze.maps.landmarks.LandmarkRepository
+import com.naze.maps.landmarks.LandmarkRepositoryImpl
 import com.naze.maps.location.CompassRepository
 import com.naze.maps.location.CompassRepositoryImpl
 import com.naze.maps.location.LocationRepository
@@ -65,8 +68,15 @@ data class RouteState(
     val activeRoute: OsrmRoute? = null,
 )
 
+/** WMAP-R2: selected world landmark (tapped on its map sprite) — drives the info panel. */
+data class LandmarkState(
+    val selected: Landmark? = null,
+)
+
 data class MapViewState(
     val isSatelliteOn: Boolean = false,
+    /** WMAP-R5: graticule layer visibility (equator, meridians, parallels). */
+    val isGraticuleOn: Boolean = false,
 )
 
 data class SettingsState(
@@ -79,6 +89,7 @@ data class MapUiState(
     val search: SearchState = SearchState(),
     val route: RouteState = RouteState(),
     val map: MapViewState = MapViewState(),
+    val landmark: LandmarkState = LandmarkState(),
     val settings: SettingsState = SettingsState(),
     val banner: MapBanner? = null,
 )
@@ -90,6 +101,8 @@ data class MapUiState(
  * while unit tests can pass fakes for every dependency. No behavior change.
  * TASK-010b: collaborator types are now hand-rolled interfaces (Impl suffix = production
  * wiring), so unit tests can pass fakes without any Android framework.
+ * WMAP-T6: landmarkRepo is appended last so existing 9-positional-arg test calls and
+ * other positional callers stay valid (default arguments).
  */
 class MapViewModel @JvmOverloads constructor(
     application: Application,
@@ -101,6 +114,7 @@ class MapViewModel @JvmOverloads constructor(
     private val historyRepo: HistoryRepository = HistoryRepositoryImpl(application),
     private val settings: SettingsDataStore = SettingsDataStoreImpl(application),
     private val connectivity: ConnectivityObserver = ConnectivityObserverImpl(application),
+    private val landmarkRepo: LandmarkRepository = LandmarkRepositoryImpl(),
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(MapUiState())
@@ -108,6 +122,9 @@ class MapViewModel @JvmOverloads constructor(
 
     val favorites = favoritesRepo.observeFavorites()
     val history = historyRepo.observeRecent()
+
+    /** WMAP-R2: curated landmark dataset — static, so it is read once. */
+    val landmarks: List<Landmark> = landmarkRepo.landmarks
 
     private var trackingJob: Job? = null
     private var compassJob: Job? = null
@@ -210,6 +227,21 @@ class MapViewModel @JvmOverloads constructor(
         }
     }
 
+    /** WMAP-R2: tap pada sprite landmark — pilih dan kosongkan hasil pencarian agar panel terbaca jelas. */
+    fun selectLandmark(landmark: Landmark) {
+        _uiState.update {
+            it.copy(
+                landmark = it.landmark.copy(selected = landmark),
+                search = it.search.copy(results = emptyList(), query = ""),
+            )
+        }
+    }
+
+    /** WMAP-R2: menutup panel info landmark. */
+    fun clearLandmarkSelection() {
+        _uiState.update { it.copy(landmark = it.landmark.copy(selected = null)) }
+    }
+
     /** Re-selects a place straight from history, without hitting Nominatim again. */
     fun selectHistoryEntry(entry: HistoryEntity) {
         val place = NominatimResult(
@@ -283,6 +315,11 @@ class MapViewModel @JvmOverloads constructor(
 
     fun toggleSatellite() {
         _uiState.update { it.copy(map = it.map.copy(isSatelliteOn = !it.map.isSatelliteOn)) }
+    }
+
+    /** WMAP-R5 (AC5.3): toggle graticule tanpa reload style. */
+    fun toggleGraticule() {
+        _uiState.update { it.copy(map = it.map.copy(isGraticuleOn = !it.map.isGraticuleOn)) }
     }
 
     fun toggleTheme() {
