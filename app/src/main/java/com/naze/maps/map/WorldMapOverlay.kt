@@ -78,7 +78,7 @@ fun Style.installLandmarks(landmarks: List<Landmark>, emblems: List<PixelEmblem>
             PropertyFactory.textColor("#FFFFFF"),
             PropertyFactory.textFont("Noto Sans Regular"),
         )
-        clusterLayer.maxZoom = 4.0
+        clusterLayer.maxZoom = 4.0f
         addLayer(clusterLayer)
     }
 
@@ -91,7 +91,7 @@ fun Style.installLandmarks(landmarks: List<Landmark>, emblems: List<PixelEmblem>
                 PropertyFactory.iconAllowOverlap(true),
             )
             layer.setFilter(Expression.eq(Expression.get("tier"), Expression.literal(tier.name)))
-            layer.minZoom = tier.minZoom
+            layer.minZoom = tier.minZoom.toFloat()
             addLayer(layer)
         }
     }
@@ -108,7 +108,7 @@ fun Style.installLandmarks(landmarks: List<Landmark>, emblems: List<PixelEmblem>
             PropertyFactory.textOffset(arrayOf(0f, 0.6f)),
             PropertyFactory.textIgnorePlacement(true),
         )
-        labelLayer.minZoom = 4.0
+        labelLayer.minZoom = 4.0f
         addLayer(labelLayer)
     }
 }
@@ -131,7 +131,7 @@ fun Style.updateGraticule(collection: FeatureCollection) {
         PropertyFactory.lineOpacity(0.8f),
         PropertyFactory.lineCap(Property.LINE_CAP_BUTT),
     )
-    lineLayer.minZoom = 1.0
+    lineLayer.minZoom = 1.0f
     addLayer(lineLayer)
 
     val majorLayer = LineLayer(GRATICULE_MAJOR_LAYER_ID, GRATICULE_SOURCE_ID).withProperties(
@@ -139,7 +139,7 @@ fun Style.updateGraticule(collection: FeatureCollection) {
         PropertyFactory.lineWidth(1.4f),
         PropertyFactory.lineCap(Property.LINE_CAP_BUTT),
     )
-    majorLayer.minZoom = 1.0
+    majorLayer.minZoom = 1.0f
     majorLayer.setFilter(Expression.eq(Expression.get("major"), Expression.literal(true)))
     addLayer(majorLayer)
 
@@ -151,7 +151,7 @@ fun Style.updateGraticule(collection: FeatureCollection) {
         PropertyFactory.textHaloWidth(1.0f),
         PropertyFactory.textFont("Noto Sans Regular"),
     )
-    labelLayer.minZoom = 2.0
+    labelLayer.minZoom = 2.0f
     addLayer(labelLayer)
 }
 

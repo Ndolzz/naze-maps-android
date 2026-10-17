@@ -10,6 +10,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - name: Checkout
@@ -43,11 +46,39 @@ jobs:
             notifications
 
       - name: Build debug APK
-        run: gradle assembleDebug --no-daemon
+        run: |
+          set -o pipefail
+          gradle assembleDebug --no-daemon 2>&1 | tee assemble-debug.log
 
       - name: Run unit tests (characterization — SDD TASK-003)
-        run: gradle test --no-daemon
+        run: |
+          set -o pipefail
+          gradle test --no-daemon 2>&1 | tee unit-tests.log
 
+
+      # WMAP-T7 diagnostic (TEMPORARY): CI logs are not accessible without admin rights.
+      # On failure, the log tail is posted as a PR comment so the compile error is readable.
+      - name: Report failure log tail on PR (WMAP-T7 diagnostic, temporary)
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const readTail = (file) => {
+              try {
+                return fs.readFileSync(file, 'utf8').split('\n').slice(-120).join('\n');
+              } catch (e) {
+                return '(log ' + file + ' unavailable: ' + e.message + ')';
+              }
+            };
+            const assemble = readTail('assemble-debug.log');
+            const tests = readTail('unit-tests.log');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '**CI failed (WMAP-T7 diagnostic)**\n\n`assembleDebug` tail:\n```\n' + assemble + '\n```\n\n`gradle test` tail:\n```\n' + tests + '\n```'
+            });
       - name: Build release APK (unsigned)
         if: github.ref == 'refs/heads/main'
         # TASK-013 (BUG-015): lintVitalAnalyzeRelease pernah gagal "Read timed out"
