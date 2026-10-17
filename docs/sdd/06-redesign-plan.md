@@ -2,7 +2,7 @@
 
 - ID: SDD-055
 - Title: Pixel-Art World Map Redesign Plan
-- Status: IN PROGRESS (branch feature/pixel-art-worldmap; T1–T6 DONE, T7 PENDING)
+- Status: IN PROGRESS (branch feature/pixel-art-worldmap; T1–T6 DONE; T7 CI hijau DONE, regression manual device PENDING)
 - Spec: FEAT-WMAP; ADR: ADR-006
 
 Pola per task (sama dengan SDD-050): Spec → implementasi minimal → test → CI →
@@ -27,9 +27,16 @@ regression manual device → update status.
   styleJson/styleKey + guard re-apply, MapScreen (tap landmark, panel info, legend,
   FAB graticule), PixelEmblemIcon (Compose), NazeFloatingDock pill collapsible,
   NazeTab emblem, MapViewModel landmark slice + toggleGraticule, +4 test MapViewModel.
-- WMAP-T7 Verification: CI hijau; regression manual device 12 fitur + checklist WMAP
-  (PENDING — CI dijalankan via draft PR ke main; regression manual device TIDAK
-  BISA dijalankan dari sandbox dan wajib dijalankan di perangkat sebelum merge).
+- WMAP-T7 Verification — CI hijau: DONE via draft PR #2 ke main (run 38993583375,
+  check "build" SUKSES 2026-10-17T02:09:59Z, head 9e0facb; assembleDebug + gradle
+  test lulus). Fix CI selama verifikasi: 1fafad6 (queryRenderedFeatures screen
+  PointF + backtick test names + features() nullability), 1820cc4 (Layer
+  setMinZoom/setMaxZoom Float — 6 assignment), 9e0facb (textFont Array<String> +
+  Property.TEXT_ANCHOR_TOP). Workflow android-build.yml dikembalikan ke bentuk
+  asli (langkah diagnostik sementara dihapus).
+- WMAP-T7 Verification — regression manual device 12 fitur + checklist WMAP:
+  PENDING (TIDAK BISA dijalankan dari sandbox; WAJIB dijalankan di perangkat
+  sebelum merge — lihat checklist di bawah).
 
 ## Regression manual device (WAJIB sebelum merge — checklist)
 1. 12 fitur baseline (lihat SDD-000 §5) tetap berfungsi di atas style pixel.
