@@ -50,7 +50,7 @@ class PixelStyleTest {
     private fun Long.toHex(): String = "#%06X".format(this and 0xFFFFFFL)
 
     @Test
-    fun 'both styles reference keyless OpenFreeMap tiles and glyphs'() {
+    fun `both styles reference keyless OpenFreeMap tiles and glyphs`() {
         for (isDark in listOf(false, true)) {
             val root = JSONObject(styleJson(isDark))
             assertEquals(
@@ -62,7 +62,7 @@ class PixelStyleTest {
     }
 
     @Test
-    fun 'landcover biome colors match PixelPalette'() {
+    fun `landcover biome colors match PixelPalette`() {
         for (isDark in listOf(false, true)) {
             val palette = PixelPalette.forTheme(isDark)
             val paint = layer(styleJson(isDark), "landcover-biomes").getJSONObject("paint")
@@ -79,7 +79,7 @@ class PixelStyleTest {
     }
 
     @Test
-    fun 'water, background and motorway colors match palette'() {
+    fun `water, background and motorway colors match palette`() {
         for (isDark in listOf(false, true)) {
             val palette = PixelPalette.forTheme(isDark)
             val water = matchColors(
@@ -99,7 +99,7 @@ class PixelStyleTest {
     }
 
     @Test
-    fun 'staged detail minzooms are configured'() {
+    fun `staged detail minzooms are configured`() {
         val json = styleJson(false)
         assertEquals(13.5, layer(json, "buildings").getDouble("minzoom"), 0.0)
         assertEquals(10.0, layer(json, "road-minor").getDouble("minzoom"), 0.0)

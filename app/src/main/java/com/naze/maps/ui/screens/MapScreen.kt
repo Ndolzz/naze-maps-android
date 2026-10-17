@@ -185,7 +185,8 @@ fun MapScreen(modifier: Modifier = Modifier) {
                 maplibreMap = map
                 // WMAP-R2 (AC2.4): deteksi tap pada symbol layer tier landmark.
                 map.addOnMapClickListener { latLng ->
-                    val tapped = map.queryRenderedFeatures(latLng, *LANDMARK_TIER_LAYER_IDS.toTypedArray())
+                    val screenPoint = map.projection.toScreenLocation(latLng)
+                    val tapped = map.queryRenderedFeatures(screenPoint, *LANDMARK_TIER_LAYER_IDS.toTypedArray())
                     val landmarkId = tapped.firstOrNull()?.getStringProperty("id")
                     val landmark = landmarkId?.let { id -> viewModel.landmarks.firstOrNull { it.id == id } }
                     if (landmark != null) {

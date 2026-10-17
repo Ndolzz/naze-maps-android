@@ -12,7 +12,7 @@ import org.junit.Test
 class PixelEmblemTest {
 
     @Test
-    fun 'all emblems have uniform non-empty rows'() {
+    fun `all emblems have uniform non-empty rows`() {
         for (emblem in PixelEmblems.all()) {
             assertTrue("emblem ${emblem.name} has no rows", emblem.rows.isNotEmpty())
             val width = emblem.rows.first().length
@@ -24,7 +24,7 @@ class PixelEmblemTest {
     }
 
     @Test
-    fun 'all pixels are transparent or defined in the palette'() {
+    fun `all pixels are transparent or defined in the palette`() {
         for (emblem in PixelEmblems.all()) {
             emblem.rows.forEachIndexed { y, row ->
                 row.forEachIndexed { x, ch ->
@@ -38,13 +38,13 @@ class PixelEmblemTest {
     }
 
     @Test
-    fun 'emblem names are unique'() {
+    fun `emblem names are unique`() {
         val names = PixelEmblems.all().map { it.name }
         assertEquals(names.size, names.toSet().size)
     }
 
     @Test
-    fun 'landmark category emblem names resolve to real emblems'() {
+    fun `landmark category emblem names resolve to real emblems`() {
         val expected = listOf(
             "emblem-temple", "emblem-tower", "emblem-pyramid",
             "emblem-arena", "emblem-mausoleum", "emblem-wall",
@@ -55,7 +55,7 @@ class PixelEmblemTest {
     }
 
     @Test
-    fun 'dock, cluster, graticule and biome emblems exist'() {
+    fun `dock, cluster, graticule and biome emblems exist`() {
         for (name in listOf(
             "emblem-navigate", "emblem-explore", "emblem-collection", "emblem-settings",
             "emblem-cluster", "emblem-graticule",
@@ -68,7 +68,7 @@ class PixelEmblemTest {
     }
 
     @Test
-    fun 'palette colors are opaque ARGB values'() {
+    fun `palette colors are opaque ARGB values`() {
         for (emblem in PixelEmblems.all()) {
             emblem.palette.values.forEach { argb ->
                 assertEquals("emblem ${emblem.name} color must be opaque", 0xFFL, argb ushr 24)

@@ -13,7 +13,7 @@ class LandmarkRepositoryTest {
     private val repository = LandmarkRepositoryImpl()
 
     @Test
-    fun 'dataset contains exactly the six curated landmarks'() {
+    fun `dataset contains exactly the six curated landmarks`() {
         val ids = repository.landmarks.map { it.id }.toSet()
         assertEquals(
             setOf("borobudur", "eiffel", "giza", "colosseum", "taj-mahal", "great-wall-badaling"),
@@ -22,7 +22,7 @@ class LandmarkRepositoryTest {
     }
 
     @Test
-    fun 'all coordinates are within valid geographic ranges'() {
+    fun `all coordinates are within valid geographic ranges`() {
         for (landmark in repository.landmarks) {
             assertTrue(
                 "${landmark.id} latitude out of range: ${landmark.latitude}",
@@ -36,7 +36,7 @@ class LandmarkRepositoryTest {
     }
 
     @Test
-    fun 'coordinates match the verified reference values'() {
+    fun `coordinates match the verified reference values`() {
         val expected = mapOf(
             "borobudur" to (-7.6079 to 110.2038),
             "eiffel" to (48.8584 to 2.2945),
@@ -53,7 +53,7 @@ class LandmarkRepositoryTest {
     }
 
     @Test
-    fun 'descriptions and names are non-blank'() {
+    fun `descriptions and names are non-blank`() {
         for (landmark in repository.landmarks) {
             assertTrue(landmark.name.isNotBlank())
             assertTrue(landmark.description.isNotBlank())
@@ -62,14 +62,14 @@ class LandmarkRepositoryTest {
     }
 
     @Test
-    fun 'tier minzoom values match the spec'() {
+    fun `tier minzoom values match the spec`() {
         assertEquals(0.0, ProminenceTier.WORLD.minZoom, 0.0)
         assertEquals(4.0, ProminenceTier.REGION.minZoom, 0.0)
         assertEquals(8.0, ProminenceTier.LOCAL.minZoom, 0.0)
     }
 
     @Test
-    fun 'every category references an emblem that exists'() {
+    fun `every category references an emblem that exists`() {
         for (category in LandmarkCategory.entries) {
             assertFalse(category.emblemName.isBlank())
         }
