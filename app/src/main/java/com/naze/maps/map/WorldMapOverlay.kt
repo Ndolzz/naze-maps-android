@@ -76,7 +76,7 @@ fun Style.installLandmarks(landmarks: List<Landmark>, emblems: List<PixelEmblem>
             PropertyFactory.textField("{point_count}"),
             PropertyFactory.textSize(9f),
             PropertyFactory.textColor("#FFFFFF"),
-            PropertyFactory.textFont("Noto Sans Regular"),
+            PropertyFactory.textFont(arrayOf("Noto Sans Regular")),
         )
         clusterLayer.maxZoom = 4.0f
         addLayer(clusterLayer)
@@ -103,8 +103,8 @@ fun Style.installLandmarks(landmarks: List<Landmark>, emblems: List<PixelEmblem>
             PropertyFactory.textColor("#12233D"),
             PropertyFactory.textHaloColor("#FFFFFF"),
             PropertyFactory.textHaloWidth(1.2f),
-            PropertyFactory.textFont("Noto Sans Regular"),
-            PropertyFactory.textAnchor(Property.ANCHOR_TOP),
+            PropertyFactory.textFont(arrayOf("Noto Sans Regular")),
+            PropertyFactory.textAnchor(Property.TEXT_ANCHOR_TOP),
             PropertyFactory.textOffset(arrayOf(0f, 0.6f)),
             PropertyFactory.textIgnorePlacement(true),
         )
@@ -149,7 +149,7 @@ fun Style.updateGraticule(collection: FeatureCollection) {
         PropertyFactory.textColor("#1F3B5C"),
         PropertyFactory.textHaloColor("#FFFFFF"),
         PropertyFactory.textHaloWidth(1.0f),
-        PropertyFactory.textFont("Noto Sans Regular"),
+        PropertyFactory.textFont(arrayOf("Noto Sans Regular")),
     )
     labelLayer.minZoom = 2.0f
     addLayer(labelLayer)
